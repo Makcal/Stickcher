@@ -1,0 +1,9 @@
+[requires]
+sqlite_orm/1.9
+rapidfuzz/3.1.1
+tgbot/1.8
+stduuid/1.2.3
+
+[generators]
+CMakeDeps
+CMakeToolchain
