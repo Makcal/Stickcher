@@ -39,3 +39,6 @@ CMakeUserPresets.json
 # Test data
 /db.sqlite
 /sticker.webp
+
+# Environment
+.env

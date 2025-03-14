@@ -5,6 +5,8 @@
 #include "bot_lib/state_storage/memory.hpp"
 
 /*#include <sqlite_orm/sqlite_orm.h>*/
+#include <fstream>
+#include <string>
 #include <tgbot/Bot.h>
 #include <tgbot/net/TgLongPoll.h>
 #include <tgbot/types/Message.h>
@@ -22,38 +24,9 @@ int main() {
     using tg_stater::EnumStateHandler, tg_stater::NoStateHandler, tg_stater::AnyStateHandler;
     using StateStorage = tg_stater::StateProxy<State, tg_stater::MemoryStateStorage<State>>;
 
-    Bot bot{"7686111024:AAH7FiefCD6YyP_PXp18vc93hMBEBzJa-3U"};
-    /*std::unordered_map<decltype(Chat::id), State> states;*/
-    /*bot.getEvents().onAnyMessage([&](const Message::Ptr& mp) {*/
-    /*    auto chatId = mp->chat->id;*/
-    /*    if (!states.contains(chatId)) {*/
-    /*        bot.getApi().sendMessage(chatId, "default");*/
-    /*        states[chatId] = State::A;*/
-    /*        return;*/
-    /*    }*/
-    /**/
-    /*    auto state = states[chatId];*/
-    /*    switch (state) {*/
-    /*    case State::A:*/
-    /*        bot.getApi().sendMessage(chatId, "A");*/
-    /*        states[chatId] = State::B;*/
-    /*        break;*/
-    /*    case State::B:*/
-    /*        bot.getApi().sendMessage(chatId, "B");*/
-    /*        states.erase(chatId);*/
-    /*        break;*/
-    /*    }*/
-    /*});*/
-
-    /*try {*/
-    /*    std::println("Bot username: {}", bot.getApi().getMe()->username);*/
-    /*    TgLongPoll lp{bot};*/
-    /*    while (true) {*/
-    /*        lp.start();*/
-    /*    }*/
-    /*} catch (...) {*/
-    /*    std::println("Error");*/
-    /*}*/
+    std::string token;
+    std::fstream{".env", std::ios_base::in} >> token;
+    Bot bot{token};
 
     auto default_ = [](const Message& m, Bot& bot, const StateStorage& ss) {
         bot.getApi().sendMessage(m.chat->id, "default. Now in A");
