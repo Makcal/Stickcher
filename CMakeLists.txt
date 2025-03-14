@@ -25,12 +25,13 @@ message(STATUS "${CMAKE_PROJECT_NAME} version: ${PROJECT_VERSION}")
 set(CMAKE_CXX_STANDDARD 23)
 set(CMAKE_CXX_STANDDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# add_compile_options(-O0 -g)
 
 # dependencies
 find_package(rapidfuzz REQUIRED)
 find_package(SqliteOrm REQUIRED)
 find_package(stduuid REQUIRED)
-find_package(tgbot REQUIRED)
+add_subdirectory(src/bot_lib)
 
 # main program
 add_executable(main src/main.cpp)
@@ -40,15 +41,13 @@ target_compile_definitions(main PRIVATE
     __cpp_pack_indexing=0
     LIBUUID_CPP20_OR_GREATER=1)
 
-# set(TgBot_INCLUDE_DIRS )
 target_include_directories(main PRIVATE 
     ${rapidfuzz_INCLUDE_DIRS}
     ${SqliteOrm_INCLUDE_DIRS}
-    ${stduuid_INCLUDE_DIRS}
-    ${tgbot_INCLUDE_DIRS})
+    ${stduuid_INCLUDE_DIRS})
 
 target_link_libraries(main PRIVATE
-    ${tgbot_LIBRARIES}
     ${SqliteOrm_LIBRARIES}
+    bot_lib
 )
 
