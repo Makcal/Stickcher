@@ -9,6 +9,8 @@
 
 namespace tg_stater {
 
+namespace concepts {
+
 template <typename T, typename StateT>
 concept StateStorage = State<StateT> && requires(T& s, ChatIdT id, const StateT& state) {
     typename StateT;
@@ -18,7 +20,9 @@ concept StateStorage = State<StateT> && requires(T& s, ChatIdT id, const StateT&
     { s.put(id, state) } -> std::same_as<std::reference_wrapper<StateT>>;
 };
 
-template <typename StateT, StateStorage<StateT> StorageT>
+}  // namespace concepts
+
+template <typename StateT, concepts::StateStorage<StateT> StorageT>
 class StateProxy {
     std::reference_wrapper<StorageT> storage;
     ChatIdT chatId;

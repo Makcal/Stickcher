@@ -5,12 +5,12 @@
 #include "bot_lib/state_storage/memory.hpp"
 
 /*#include <sqlite_orm/sqlite_orm.h>*/
-#include <fstream>
-#include <string>
 #include <tgbot/Bot.h>
 #include <tgbot/net/TgLongPoll.h>
 #include <tgbot/types/Message.h>
 
+#include <fstream>
+#include <string>
 #include <print>
 
 enum struct State : char {

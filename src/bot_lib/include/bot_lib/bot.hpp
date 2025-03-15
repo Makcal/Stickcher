@@ -6,14 +6,14 @@
 #include "bot_lib/state_storage/common.hpp"
 #include "bot_lib/state_storage/memory.hpp"
 
-#include <chrono>
-#include <iostream>
 #include <tgbot/Bot.h>
 #include <tgbot/net/TgLongPoll.h>
 #include <tgbot/tgbot.h>
 #include <tgbot/types/Chat.h>
 #include <tgbot/types/Message.h>
 
+#include <chrono>
+#include <iostream>
 #include <print>
 #include <stdexcept>
 #include <tuple>
@@ -22,7 +22,7 @@
 
 namespace tg_stater {
 
-template <State StateT, StateStorage<StateT> StateStorageT, auto... HandlerMetas>
+template <State StateT, concepts::StateStorage<StateT> StateStorageT, auto... HandlerMetas>
     requires(concepts::AnyHandler<decltype(HandlerMetas), StateT, StateStorageT> && ...)
 class Stater {
     StateStorageT stateStorage_;

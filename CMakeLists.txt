@@ -25,7 +25,8 @@ message(STATUS "${CMAKE_PROJECT_NAME} version: ${PROJECT_VERSION}")
 set(CMAKE_CXX_STANDDARD 23)
 set(CMAKE_CXX_STANDDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-# add_compile_options(-O0 -g)
+add_compile_options(-ftime-report)
+# add_compile_options(-O0)
 
 # dependencies
 find_package(rapidfuzz REQUIRED)
@@ -37,6 +38,22 @@ add_subdirectory(src/bot_lib)
 add_executable(main src/main.cpp)
 
 # setup
+target_precompile_headers(main PRIVATE
+    <tgbot/tgbot.h>
+    <chrono>
+    <concepts>
+    <fstream>
+    <functional>
+    <iostream>
+    <optional>
+    <print>
+    <stdexcept>
+    <string>
+    <tuple>
+    <type_traits>
+    <unordered_map>
+    <utility>)
+
 target_compile_definitions(main PRIVATE 
     __cpp_pack_indexing=0
     LIBUUID_CPP20_OR_GREATER=1)
