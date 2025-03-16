@@ -5,12 +5,14 @@
 #include "bot_lib/state.hpp"
 #include "bot_lib/state_storage/common.hpp"
 
-#include <tgbot/Bot.h>
-#include <tgbot/types/Message.h>
-
 #include <concepts>
 #include <tuple>
 #include <type_traits>
+
+namespace TgBot {
+class Bot;
+class Message;
+} // namespace TgBot
 
 namespace tg_stater {
 
@@ -52,6 +54,10 @@ namespace concepts {
 template <typename F, typename StateT, typename StateProxyT>
 concept EnumStateHandlerF = std::invocable<F, StateT&, const TgBot::Message&, TgBot::Bot&, const StateProxyT&>;
 
+// StateT here is a specific expected part of std::variant
+template <typename F, typename StateT, typename StateProxyT>
+concept VariantStateHandlerF = std::invocable<F, StateT&, const TgBot::Message&, TgBot::Bot&, const StateProxyT&>;
+
 template <typename F, typename StateProxyT>
 concept NoStateHandlerF = std::invocable<F, const TgBot::Message&, TgBot::Bot&, const StateProxyT&>;
 
@@ -60,14 +66,25 @@ concept AnyStateHandlerF = NoStateHandlerF<F, StateProxyT>;
 
 } // namespace concepts
 
-template <EnumState S, typename StateProxyT, concepts::EnumStateHandlerF<S, StateProxyT> F>
+template <concepts::EnumState S, typename StateProxyT, concepts::EnumStateHandlerF<S, StateProxyT> F>
 struct EnumStateHandler {
     S state;
     F handler;
 };
-template <State S, typename F>
+template <concepts::EnumState S, typename F>
 EnumStateHandler(S, const F&)
     -> EnumStateHandler<S, std::remove_cvref_t<typename detail::function_traits<F>::template ArgT<3>>, F>;
+
+template <typename S, typename StateProxyT, concepts::VariantStateHandlerF<S, StateProxyT> F>
+struct VariantStateHandler {
+    using State = S;
+    F handler;
+};
+template <typename F>
+VariantStateHandler(const F&)
+    -> VariantStateHandler<std::remove_cvref_t<typename detail::function_traits<F>::template ArgT<0>>,
+                           std::remove_cvref_t<typename detail::function_traits<F>::template ArgT<3>>,
+                           F>;
 
 template <typename StateProxyT, concepts::NoStateHandlerF<StateProxyT> F>
 struct NoStateHandler {
@@ -89,22 +106,52 @@ namespace concepts {
 
 template <typename T, typename StateT, typename StateStorageT>
 concept EnumStateHandler =
-    State<StateT> && StateStorage<StateStorageT, StateT> &&
-    meta::is_of_template<meta::Curry<EnumStateHandler, StateT, StateProxy<StateT, StateStorageT>>::template type, T>;
+    EnumState<StateT> && StateStorage<StateStorageT, StateT> &&
+    meta::IsOfTemplate<meta::Curry<EnumStateHandler, StateT, StateProxy<StateStorageT>>::template type, T>;
+
+namespace detail {
+
+template <typename T, typename StateStorageT>
+struct CheckVariantStateHandler : std::false_type {};
+
+template <typename S, typename StateStorageT, typename F>
+    requires meta::IsPartOfVariant<S, typename StateStorageT::StateT>
+struct CheckVariantStateHandler<VariantStateHandler<S, StateProxy<StateStorageT>, F>, StateStorageT> : std::true_type {
+};
+
+} // namespace detail
 
 template <typename T, typename StateT, typename StateStorageT>
-concept NoStateHandler =
-    State<StateT> && StateStorage<StateStorageT, StateT> &&
-    meta::is_of_template<meta::Curry<NoStateHandler, StateProxy<StateT, StateStorageT>>::template type, T>;
+concept VariantStateHandler = VariantState<StateT> && StateStorage<StateStorageT, StateT> &&
+                              detail::CheckVariantStateHandler<T, StateStorageT>::value;
 
 template <typename T, typename StateT, typename StateStorageT>
-concept AnyStateHandler =
-    State<StateT> && StateStorage<StateStorageT, StateT> &&
-    meta::is_of_template<meta::Curry<AnyStateHandler, StateProxy<StateT, StateStorageT>>::template type, T>;
+concept NoStateHandler = State<StateT> && StateStorage<StateStorageT, StateT> &&
+                         meta::IsOfTemplate<meta::Curry<NoStateHandler, StateProxy<StateStorageT>>::template type, T>;
 
 template <typename T, typename StateT, typename StateStorageT>
-concept AnyHandler = EnumStateHandler<T, StateT, StateStorageT> || NoStateHandler<T, StateT, StateStorageT> ||
-                     AnyStateHandler<T, StateT, StateStorageT>;
+concept AnyStateHandler = State<StateT> && StateStorage<StateStorageT, StateT> &&
+                          meta::IsOfTemplate<meta::Curry<AnyStateHandler, StateProxy<StateStorageT>>::template type, T>;
+
+template <typename T, typename StateT, typename StateStorageT>
+concept AnyEnumStaterHandler = EnumStateHandler<T, StateT, StateStorageT> || NoStateHandler<T, StateT, StateStorageT> ||
+                               AnyStateHandler<T, StateT, StateStorageT>;
+
+template <typename T, typename StateT, typename StateStorageT>
+concept AnyVariantStaterHandler = VariantStateHandler<T, StateT, StateStorageT> ||
+                                  NoStateHandler<T, StateT, StateStorageT> || AnyStateHandler<T, StateT, StateStorageT>;
+
+template <typename StateT, typename StateStorageT, auto... HandlerMetas>
+concept CheckEnumStaterHandlers =
+    EnumState<StateT> && (concepts::AnyEnumStaterHandler<decltype(HandlerMetas), StateT, StateStorageT> && ...);
+
+template <typename StateT, typename StateStorageT, auto... HandlerMetas>
+concept CheckVariantStaterHandlers =
+    VariantState<StateT> && (concepts::AnyVariantStaterHandler<decltype(HandlerMetas), StateT, StateStorageT> && ...);
+
+template <typename HandlerMeta, typename State, typename StateT, typename StateStorageT>
+concept BelongsToStateHandler =
+    VariantStateHandler<HandlerMeta, StateT, StateStorageT> && std::same_as<typename HandlerMeta::State, State>;
 
 } // namespace concepts
 

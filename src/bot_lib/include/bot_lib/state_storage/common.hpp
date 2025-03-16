@@ -4,26 +4,33 @@
 #include "bot_lib/chat_id_type.hpp"
 #include "bot_lib/state.hpp"
 
+#include <concepts>
 #include <functional>
-#include <optional>
+#include <utility>
 
 namespace tg_stater {
 
 namespace concepts {
 
 template <typename T, typename StateT>
-concept StateStorage = State<StateT> && requires(T& s, ChatIdT id, const StateT& state) {
-    typename StateT;
-    { s[id] } -> std::same_as<std::optional<std::reference_wrapper<StateT>>>;
-    { s.get(id) } -> std::same_as<std::optional<std::reference_wrapper<StateT>>>; // same as s[id]
+concept StateStorage = State<StateT> && requires(T& s, ChatIdT id) {
+    typename T::StateT;
+    requires std::same_as<typename T::StateT, StateT>;
+
+    { s[id] } -> std::same_as<StateT*>; // pointer here represents a non-const nullable reference (optional<StateT&>)
+    { s.get(id) } -> std::same_as<StateT*>; // same as s[id]
     { s.erase(id) } -> std::same_as<void>;
-    { s.put(id, state) } -> std::same_as<std::reference_wrapper<StateT>>;
+    { s.put(id, std::declval<const StateT&>()) } -> std::same_as<StateT&>;
+    { s.put(id, std::declval<StateT&&>()) } -> std::same_as<StateT&>;
 };
 
-}  // namespace concepts
+} // namespace concepts
 
-template <typename StateT, concepts::StateStorage<StateT> StorageT>
+template <typename StorageT>
+    requires concepts::StateStorage<StorageT, typename StorageT::StateT>
 class StateProxy {
+    using StateT = StorageT::StateT;
+
     std::reference_wrapper<StorageT> storage;
     ChatIdT chatId;
 
@@ -43,11 +50,13 @@ class StateProxy {
     }
 
     decltype(auto) put(const StateT& state) const {
-        storage.get().put(chatId, state);
+        return storage.get().put(chatId, state);
+    }
+
+    decltype(auto) put(StateT&& state) const {
+        return storage.get().put(chatId, std::move(state));
     }
 };
-template <typename StorageT>
-StateProxy(StorageT&, ChatIdT) -> StateProxy<typename StorageT::StateT, StorageT>;
 
 } // namespace tg_stater
 #endif // INCLUDE_bot_lib_state_storage_common

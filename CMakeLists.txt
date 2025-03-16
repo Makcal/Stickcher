@@ -13,7 +13,7 @@ message(STATUS "${CMAKE_PROJECT_NAME} Build Type: ${CMAKE_BUILD_TYPE}")
 
 # Set the version for sticker_searcher
 set(sticker_searcher_Version_Major 0)
-set(sticker_searcher_Version_Minor 1)
+set(sticker_searcher_Version_Minor 2)
 set(sticker_searcher_Version_Patch 0)
 set(sticker_searcher_Version_Status "-dev")
 set(PROJECT_VERSION
@@ -40,12 +40,16 @@ add_executable(main src/main.cpp)
 # setup
 target_precompile_headers(main PRIVATE
     <tgbot/tgbot.h>
+    <tgbot/net/TgLongPoll.h>
+    <tgbot/Bot.h>
+    <tgbot/types/Chat.h>
+    <tgbot/types/Message.h>
     <chrono>
     <concepts>
+    <cstddef>
     <fstream>
     <functional>
     <iostream>
-    <optional>
     <print>
     <stdexcept>
     <string>

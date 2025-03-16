@@ -6,19 +6,18 @@
 #include <type_traits>
 #include <variant>
 
-namespace tg_stater {
-
-struct AnyState {};
-struct NoState {};
-
-template <typename T>
-concept UnionState = meta::is_of_template<std::variant, T>;
+namespace tg_stater::concepts {
 
 template <typename T>
 concept EnumState = std::is_enum_v<T>;
 
+// algebraic union
 template <typename T>
-concept State = UnionState<T> || EnumState<T>;
+concept VariantState = meta::IsOfTemplate<std::variant, T>;
 
-} // namespace tg_stater
+template <typename T>
+concept State = VariantState<T> || EnumState<T>;
+
+} // namespace tg_stater::concepts
+
 #endif // !INCLUDE_bot_lib_state

@@ -1,6 +1,7 @@
 #ifndef INCLUDE_bot_lib_meta
 #define INCLUDE_bot_lib_meta
 
+#include <cstddef>
 #include <type_traits>
 
 namespace tg_stater::meta {
@@ -8,7 +9,7 @@ namespace tg_stater::meta {
 namespace detail {
 
 template <template <typename...> typename T>
-struct is_of_template_impl {
+struct IsOfTemplateImpl {
     template <typename C>
     struct check : std::false_type {};
 
@@ -16,10 +17,23 @@ struct is_of_template_impl {
     struct check<T<Args...>> : std::true_type {};
 };
 
+template <typename T, typename V, std::size_t I>
+struct ElementInVariantCheck : std::bool_constant<std::is_same_v<T, std::variant_alternative_t<I, V>> ||
+                                                  ElementInVariantCheck<T, V, I - 1>::value> {};
+
+template <typename T, typename V>
+struct ElementInVariantCheck<T, V, 0> : std::bool_constant<std::is_same_v<T, std::variant_alternative_t<0, V>>> {};
+
+template <typename T, typename V>
+concept IsPartOfVariantImpl = ElementInVariantCheck<T, V, std::variant_size_v<V> - 1>::value;
+
 } // namespace detail
 
 template <template <typename...> typename T, typename U>
-concept is_of_template = detail::is_of_template_impl<T>::template check<U>::value;
+concept IsOfTemplate = detail::IsOfTemplateImpl<T>::template check<U>::value;
+
+template <typename T, typename V>
+concept IsPartOfVariant = meta::IsOfTemplate<std::variant, V> && detail::IsPartOfVariantImpl<T, V>;
 
 template <template <typename...> typename T, typename... Args1>
 struct Curry {
@@ -53,5 +67,5 @@ using someType = TestPair<double, double>;
 static_assert(is_of_template<someTemplate>::check<someType>::value);
 */
 
-} // namespace tg_stater
+} // namespace tg_stater::meta
 #endif // INCLUDE_bot_lib_meta

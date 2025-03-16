@@ -6,55 +6,70 @@
 
 /*#include <sqlite_orm/sqlite_orm.h>*/
 #include <tgbot/Bot.h>
-#include <tgbot/net/TgLongPoll.h>
-#include <tgbot/types/Message.h>
 
 #include <fstream>
-#include <string>
+#include <ostream>
 #include <print>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
-enum struct State : char {
-    A,
-    B,
-    C,
+namespace TgBot {
+class Message;
+} // namespace TgBot
+
+struct Confirmation {
+    std::vector<std::string> v;
 };
 
+struct Selection {
+    std::vector<std::string> v;
+};
+
+using State = std::variant<Confirmation, Selection>;
+
 int main() {
-    using namespace TgBot;
-    using tg_stater::EnumStateHandler, tg_stater::NoStateHandler, tg_stater::AnyStateHandler;
-    using StateStorage = tg_stater::StateProxy<State, tg_stater::MemoryStateStorage<State>>;
+    using tg_stater::EnumStateHandler, tg_stater::NoStateHandler, tg_stater::AnyStateHandler,
+        tg_stater::VariantStateHandler;
+    using TgBot::Bot, TgBot::Message;
+    using StateStorage = tg_stater::StateProxy<tg_stater::MemoryStateStorage<State>>;
 
     std::string token;
-    std::fstream{".env", std::ios_base::in} >> token;
+    std::ifstream{".env"} >> token;
     Bot bot{token};
 
     auto default_ = [](const Message& m, Bot& bot, const StateStorage& ss) {
-        bot.getApi().sendMessage(m.chat->id, "default. Now in A");
-        ss.put(State::A);
+        bot.getApi().sendMessage(m.chat->id, "Enter items. Type \"done\" when finish.");
+        ss.put(Selection{});
     };
     auto always = [](const Message& m, Bot& bot, const StateStorage&) {
         bot.getApi().sendMessage(m.chat->id, "always");
     };
-    auto stateA = [](State& state, const Message& m, Bot& bot, const StateStorage& /*ss*/) {
-        bot.getApi().sendMessage(m.chat->id, "A");
-        state = State::B;
+    auto select = [](Selection& state, const Message& m, Bot& bot, const StateStorage& ss) {
+        if (m.text != "done")
+            state.v.push_back(m.text);
+        std::ostringstream output;
+        for (const auto& s : state.v)
+            std::println(output, "- {}", s);
+        bot.getApi().sendMessage(m.chat->id, "You selected:\n" + output.str());
+        if (m.text == "done") {
+            bot.getApi().sendMessage(m.chat->id, "Confirm with \"Yes\"");
+            ss.put(Confirmation{std::move(state.v)});
+        }
     };
-    auto stateB = [](State& state, const Message& m, Bot& bot, const StateStorage& /*ss*/) {
-        bot.getApi().sendMessage(m.chat->id, "B");
-        state = State::C;
-    };
-    auto stateC = [](State& state, const Message& m, Bot& bot, const StateStorage& /*ss*/) {
-        bot.getApi().sendMessage(m.chat->id, "C");
-        state = State::A;
+    auto confirm = [](Confirmation& state, const Message& m, Bot& bot, const StateStorage& ss) {
+        bot.getApi().sendMessage(m.chat->id,
+                                 m.text == "Yes" ? "Selected " + std::to_string(state.v.size()) : "All again");
+        bot.getApi().sendMessage(m.chat->id, "Enter items. Type \"done\" when finish.");
+        ss.put(Selection{});
     };
 
     tg_stater::DefaultStater<State,
                              NoStateHandler{default_},
                              AnyStateHandler{always},
-                             EnumStateHandler{.state = State::A, .handler = stateA},
-                             EnumStateHandler{.state = State::B, .handler = stateB},
-                             EnumStateHandler{.state = State::C, .handler = stateC}>
-        stater{std::move(bot)};
-    std::println("Bot has started.");
-    stater.start();
+                             VariantStateHandler{confirm},
+                             VariantStateHandler{select}>
+        stater{};
+    stater.start(std::move(bot));
 }
