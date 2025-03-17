@@ -91,7 +91,7 @@ class Stater {
                 std::apply(
                     [&](auto&&... handlers) {
                         ((handlers.state == currentStateCopy
-                              ? handlers.handler(currentStateRef, message, bot, stateProxy)
+                              ? handlers.handler(currentStateRef, message, bot.getApi(), stateProxy)
                               : void()),
                          ...);
                     },
@@ -102,8 +102,7 @@ class Stater {
                     [&](auto& state) {
                         std::apply(
                             [&](auto&&... handlers) {
-                                std::println("{}", sizeof...(handlers));
-                                (handlers.handler(state, message, bot, stateProxy), ...);
+                                (handlers.handler(state, message, bot.getApi(), stateProxy), ...);
                             },
                             HandlerHelper::findHandlers(HandlerHelper::template variantStateFilterByState<
                                                         std::remove_cvref_t<decltype(state)>>));
@@ -112,11 +111,11 @@ class Stater {
             }
         } else {
             // no state handlers
-            std::apply([&](auto&&... handlers) { (handlers.handler(message, bot, stateProxy), ...); },
+            std::apply([&](auto&&... handlers) { (handlers.handler(message, bot.getApi(), stateProxy), ...); },
                        HandlerHelper::findHandlers(HandlerHelper::noStateFilter));
         }
         // any state handlers
-        std::apply([&](auto&&... handlers) { (handlers.handler(message, bot, stateProxy), ...); },
+        std::apply([&](auto&&... handlers) { (handlers.handler(message, bot.getApi(), stateProxy), ...); },
                    HandlerHelper::findHandlers(HandlerHelper::anyStateFilter));
 
         std::println(std::clog, "{}: Get message from chat {}", std::chrono::system_clock::now(), chatId);

@@ -10,7 +10,7 @@
 #include <type_traits>
 
 namespace TgBot {
-class Bot;
+class Api;
 class Message;
 } // namespace TgBot
 
@@ -52,14 +52,14 @@ struct function_traits<ReturnT(Args...)> : function_traits<ReturnT (*)(Args...)>
 namespace concepts {
 
 template <typename F, typename StateT, typename StateProxyT>
-concept EnumStateHandlerF = std::invocable<F, StateT&, const TgBot::Message&, TgBot::Bot&, const StateProxyT&>;
+concept EnumStateHandlerF = std::invocable<F, StateT&, const TgBot::Message&, const TgBot::Api&, const StateProxyT&>;
 
 // StateT here is a specific expected part of std::variant
 template <typename F, typename StateT, typename StateProxyT>
-concept VariantStateHandlerF = std::invocable<F, StateT&, const TgBot::Message&, TgBot::Bot&, const StateProxyT&>;
+concept VariantStateHandlerF = std::invocable<F, StateT&, const TgBot::Message&, const TgBot::Api&, const StateProxyT&>;
 
 template <typename F, typename StateProxyT>
-concept NoStateHandlerF = std::invocable<F, const TgBot::Message&, TgBot::Bot&, const StateProxyT&>;
+concept NoStateHandlerF = std::invocable<F, const TgBot::Message&, const TgBot::Api&, const StateProxyT&>;
 
 template <typename F, typename StateProxyT>
 concept AnyStateHandlerF = NoStateHandlerF<F, StateProxyT>;
