@@ -1,8 +1,10 @@
 #ifndef INCLUDE_bot_lib_meta
 #define INCLUDE_bot_lib_meta
 
+#include <concepts>
 #include <cstddef>
 #include <type_traits>
+#include <variant>
 
 namespace tg_stater::meta {
 
@@ -29,26 +31,26 @@ concept IsPartOfVariantImpl = ElementInVariantCheck<T, V, std::variant_size_v<V>
 
 } // namespace detail
 
-template <template <typename...> typename T, typename U>
-concept IsOfTemplate = detail::IsOfTemplateImpl<T>::template check<U>::value;
+template <typename U, template <typename...> typename T>
+concept is_of_template = detail::IsOfTemplateImpl<T>::template check<U>::value;
 
 template <typename T, typename V>
-concept IsPartOfVariant = meta::IsOfTemplate<std::variant, V> && detail::IsPartOfVariantImpl<T, V>;
+concept is_part_of_variant = meta::is_of_template<V, std::variant> && detail::IsPartOfVariantImpl<T, V>;
 
 template <template <typename...> typename T, typename... Args1>
-struct Curry {
+struct curry {
     template <typename... Args2>
     using type = T<Args1..., Args2...>;
 };
 
 template <template <typename, typename...> typename T, typename Arg2>
-struct Flip {
+struct flip {
     template <typename Arg1, typename... Args>
     using type = T<Arg1, Arg2, Args...>;
 };
 
 template <template <typename, typename...> typename T, typename Arg2>
-struct FlipFinite {
+struct flip_finite {
     template <typename Arg1, typename... Args>
     struct alias {
         using type = T<Arg1, Arg2, Args...>;
@@ -66,6 +68,9 @@ using someTemplate = Curry<TestPair, double>::type<Args...>;
 using someType = TestPair<double, double>;
 static_assert(is_of_template<someTemplate>::check<someType>::value);
 */
+
+template <typename T, typename... Ts>
+concept one_of = (std::same_as<T, Ts> || ...);
 
 } // namespace tg_stater::meta
 #endif // INCLUDE_bot_lib_meta

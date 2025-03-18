@@ -13,7 +13,7 @@ concept EnumState = std::is_enum_v<T>;
 
 // algebraic union
 template <typename T>
-concept VariantState = meta::IsOfTemplate<std::variant, T>;
+concept VariantState = meta::is_of_template<T, std::variant>;
 
 template <typename T>
 concept State = VariantState<T> || EnumState<T>;

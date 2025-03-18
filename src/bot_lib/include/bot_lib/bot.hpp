@@ -64,7 +64,7 @@ class Stater {
         static constexpr auto variantStateFilter = []<typename Meta>() {
             return concepts::VariantStateHandler<Meta, StateT, StateStorageT>;
         };
-        template <meta::IsPartOfVariant<StateT> State>
+        template <meta::is_part_of_variant<StateT> State>
             requires isVariantState
         static constexpr auto variantStateFilterByState =
             []<typename Meta>() { return concepts::BelongsToStateHandler<Meta, State, StateT, StateStorageT>; };
