@@ -72,5 +72,39 @@ static_assert(is_of_template<someTemplate>::check<someType>::value);
 template <typename T, typename... Ts>
 concept one_of = (std::same_as<T, Ts> || ...);
 
+// function traits
+namespace detail {
+
+template <typename ReturnT_, typename... Args>
+struct general_function_traits {
+    using ReturnT = ReturnT_;
+
+    constexpr static std::size_t arg_count = sizeof...(Args);
+
+    template <std::size_t I>
+    using ArgT = std::tuple_element<I, std::tuple<Args...>>::type;
+};
+
+} // namespace detail
+
+template <typename F>
+struct function_traits;
+
+template <typename F>
+    requires requires { &F::operator(); }
+struct function_traits<F> : function_traits<decltype(&F::operator())> {};
+
+// for non-static non-mutable lambdas
+template <typename T, typename ReturnT, typename... Args>
+struct function_traits<ReturnT (T::*)(Args...) const> : detail::general_function_traits<ReturnT, Args...> {};
+
+// for static lambdas and function pointers
+template <typename ReturnT, typename... Args>
+struct function_traits<ReturnT (*)(Args...)> : detail::general_function_traits<ReturnT, Args...> {};
+
+// for function types
+template <typename ReturnT, typename... Args>
+struct function_traits<ReturnT(Args...)> : function_traits<ReturnT (*)(Args...)> {};
+
 } // namespace tg_stater::meta
 #endif // INCLUDE_bot_lib_meta

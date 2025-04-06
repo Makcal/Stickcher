@@ -1,7 +1,6 @@
 #ifndef INCLUDE_bot_lib_bot
 #define INCLUDE_bot_lib_bot
 
-#include "bot_lib/handler.hpp"
 #include "bot_lib/meta.hpp"
 #include "bot_lib/state.hpp"
 #include "bot_lib/state_storage/common.hpp"
@@ -27,9 +26,7 @@ class Bot;
 
 namespace tg_stater {
 
-template <concepts::State StateT, concepts::StateStorage<StateT> StateStorageT, auto... HandlerMetas>
-    requires(concepts::CheckEnumStaterHandlers<StateT, StateStorageT, HandlerMetas...> ||
-             concepts::CheckVariantStaterHandlers<StateT, StateStorageT, HandlerMetas...>)
+template <concepts::State StateT, concepts::StateStorage<StateT> StateStorageT, typename Dependency>
 class Stater {
     static constexpr bool isVariantState = concepts::VariantState<StateT>;
 
@@ -53,16 +50,13 @@ class Stater {
         };
 
         static constexpr auto noStateFilter = []<typename Meta>() {
-            return concepts::NoStateHandler<Meta, StateT, StateStorageT>;
+            return std::same_as<typename Meta::Type, HandlerStateTypes::NoState>;
         };
         static constexpr auto anyStateFilter = []<typename Meta>() {
-            return concepts::AnyStateHandler<Meta, StateT, StateStorageT>;
+            return std::same_as<typename Meta::Type, HandlerStateTypes::AnyState>;
         };
-        static constexpr auto enumStateFilter = []<typename Meta>() {
-            return concepts::EnumStateHandler<Meta, StateT, StateStorageT>;
-        };
-        static constexpr auto variantStateFilter = []<typename Meta>() {
-            return concepts::VariantStateHandler<Meta, StateT, StateStorageT>;
+        static constexpr auto specificStateFilter = []<typename Meta>() {
+            return std::same_as<typename Meta::Type, HandlerStateTypes::State>;
         };
         template <meta::is_part_of_variant<StateT> State>
             requires isVariantState
@@ -74,7 +68,8 @@ class Stater {
         }
     };
 
-    void anyMessageHandler(TgBot::Bot& bot, const TgBot::Message::Ptr& mp) {
+    template <auto... EventHandlers>
+    void eventHandler(TgBot::Bot& bot, const TgBot::Message::Ptr& mp) {
         if (!mp || !mp->chat)
             throw std::runtime_error("Null message or chat.");
 
@@ -91,7 +86,7 @@ class Stater {
                 std::apply(
                     [&](auto&&... handlers) {
                         ((handlers.state == currentStateCopy
-                              ? handlers.handler(currentStateRef, message, bot.getApi(), stateProxy)
+                              ? handlers.handler(bot.getApi(), stateProxy, currentStateRef, message)
                               : void()),
                          ...);
                     },
@@ -102,7 +97,7 @@ class Stater {
                     [&](auto& state) {
                         std::apply(
                             [&](auto&&... handlers) {
-                                (handlers.handler(state, message, bot.getApi(), stateProxy), ...);
+                                (handlers.handler(bot.getApi(), stateProxy, state, message), ...);
                             },
                             HandlerHelper::findHandlers(HandlerHelper::template variantStateFilterByState<
                                                         std::remove_cvref_t<decltype(state)>>));
@@ -111,11 +106,11 @@ class Stater {
             }
         } else {
             // no state handlers
-            std::apply([&](auto&&... handlers) { (handlers.handler(message, bot.getApi(), stateProxy), ...); },
+            std::apply([&](auto&&... handlers) { (handlers.handler(bot.getApi(), stateProxy, message), ...); },
                        HandlerHelper::findHandlers(HandlerHelper::noStateFilter));
         }
         // any state handlers
-        std::apply([&](auto&&... handlers) { (handlers.handler(message, bot.getApi(), stateProxy), ...); },
+        std::apply([&](auto&&... handlers) { (handlers.handler(bot.getApi(), stateProxy, message), ...); },
                    HandlerHelper::findHandlers(HandlerHelper::anyStateFilter));
 
         std::println(std::clog, "{}: Get message from chat {}", std::chrono::system_clock::now(), chatId);
