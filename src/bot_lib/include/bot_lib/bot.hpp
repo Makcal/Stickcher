@@ -1,11 +1,17 @@
 #ifndef INCLUDE_bot_lib_bot
 #define INCLUDE_bot_lib_bot
 
+#include "bot_lib/dependencies.hpp"
+#include "bot_lib/handler/callback.hpp"
+#include "bot_lib/handler/event.hpp"
+#include "bot_lib/handler/type.hpp"
 #include "bot_lib/meta.hpp"
 #include "bot_lib/state.hpp"
 #include "bot_lib/state_storage/common.hpp"
 #include "bot_lib/state_storage/memory.hpp"
 
+#include <tgbot/Api.h>
+#include <tgbot/Bot.h>
 #include <tgbot/net/TgLongPoll.h>
 #include <tgbot/types/Message.h>
 
@@ -26,105 +32,162 @@ class Bot;
 
 namespace tg_stater {
 
-template <concepts::State StateT, concepts::StateStorage<StateT> StateStorageT, typename Dependency>
-class Stater {
-    static constexpr bool isVariantState = concepts::VariantState<StateT>;
+namespace detail {
 
-    StateStorageT stateStorage_;
+template <concepts::State StateT, concepts::StateStorage<StateT> StateStorageT, typename Dependencies, typename Handler>
+struct HandlerValidator {
+  private:
+    using FT = decltype(Handler::f);
+    using FirstArgT = std::remove_cvref_t<typename meta::function_traits<FT>::template ArgT<0>>;
+    static constexpr bool takesState = concepts::StateOption<FirstArgT, StateT>;
 
-    struct HandlerHelper {
-        struct HanlderFilter {
-            template <auto Meta, auto... Metas>
-            static consteval decltype(auto) find(const auto& filter) {
-                if constexpr (filter.template operator()<decltype(Meta)>())
-                    return std::tuple_cat(std::tuple{Meta}, find<Metas...>(filter));
-                else
-                    return find<Metas...>(filter);
-            }
+  public:
+    using Callback_ = Callback<Handler::f,
+                               StateT,
+                               std::conditional_t<takesState, FirstArgT, NulloptStateOption>,
+                               Handler::event,
+                               Handler::type,
+                               StateStorageT,
+                               Dependencies>;
+};
 
-            template <auto... Metas>
-                requires(sizeof...(Metas) == 0)
-            static consteval std::tuple<> find(const auto& /*filter*/) {
-                return std::tuple{};
-            }
-        };
+// CheckIsCallback
+template <typename T>
+struct CheckIsCallback : std::false_type {};
 
-        static constexpr auto noStateFilter = []<typename Meta>() {
-            return std::same_as<typename Meta::Type, HandlerStateTypes::NoState>;
-        };
-        static constexpr auto anyStateFilter = []<typename Meta>() {
-            return std::same_as<typename Meta::Type, HandlerStateTypes::AnyState>;
-        };
-        static constexpr auto specificStateFilter = []<typename Meta>() {
-            return std::same_as<typename Meta::Type, HandlerStateTypes::State>;
-        };
-        template <meta::is_part_of_variant<StateT> State>
-            requires isVariantState
-        static constexpr auto variantStateFilterByState =
-            []<typename Meta>() { return concepts::BelongsToStateHandler<Meta, State, StateT, StateStorageT>; };
+// CheckIsCallback
+template <auto F,
+          concepts::State StateT,
+          concepts::OptionalStateOption<StateT> StateOptionT,
+          concepts::Event auto Event,
+          concepts::HandlerType auto HandlerType,
+          concepts::StateStorage<StateT> StateStorageT,
+          typename DependenciesT>
+struct CheckIsCallback<Callback<F, StateT, StateOptionT, Event, HandlerType, StateStorageT, DependenciesT>>
+    : std::true_type {};
 
-        static consteval decltype(auto) findHandlers(const auto& filter) {
-            return HanlderFilter::template find<HandlerMetas...>(filter);
-        }
+struct HandlerFinder {
+  private:
+    template <auto F, typename... Callbacks_>
+    struct HandlerFilter;
+
+    template <auto F, typename Callback, typename... Callbacks_>
+    struct HandlerFilter<F, Callback, Callbacks_...> {
+      private:
+        static constexpr bool match = F.template operator()<Callback>();
+        using other = HandlerFilter<F, Callbacks_...>::type;
+
+      public:
+        using type =
+            std::conditional_t<match,
+                               decltype(std::tuple_cat(std::declval<std::tuple<Callback>>(), std::declval<other>())),
+                               other>;
     };
 
-    template <auto... EventHandlers>
-    void eventHandler(TgBot::Bot& bot, const TgBot::Message::Ptr& mp) {
-        if (!mp || !mp->chat)
-            throw std::runtime_error("Null message or chat.");
+    template <auto F>
+    struct HandlerFilter<F> {
+        using type = std::tuple<>;
+    };
 
-        const TgBot::Message& message = *mp;
-        const auto chatId = message.chat->id;
-        StateT* const mCurrentState = stateStorage_[chatId];
-        const StateProxy stateProxy{stateStorage_, chatId};
+  public:
+    static constexpr auto noStateFilter = []<typename Callback>() {
+        return std::same_as<typename Callback::TypeT, HandlerTypes::NoState>;
+    };
+    static constexpr auto anyStateFilter = []<typename Callback>() {
+        return std::same_as<typename Callback::TypeT, HandlerTypes::AnyState>;
+    };
+    template <typename StateOptionT>
+    static constexpr auto filterByStateOption = []<typename Callback>() {
+        return std::same_as<typename Callback::TypeT, HandlerTypes::State> &&
+               std::same_as<StateOptionT, typename Callback::StateOption>;
+    };
+    template <typename EventT>
+    static constexpr auto filterByEventType =
+        []<typename Callback>() { return std::same_as<EventT, typename Callback::EventT>; };
+
+    template <auto Filter, typename... Callbacks_>
+    using find = HandlerFilter<Filter, Callbacks_...>::type;
+};
+
+// Main implementation class.
+template <concepts::State StateT,
+          concepts::StateStorage<StateT> StateStorageT,
+          typename DependenciesT,
+          typename... Callbacks>
+    requires(detail::CheckIsCallback<Callbacks>::value && ...)
+class StaterBase {
+    StateStorageT stateStorage;
+    DependenciesT dependencies;
+
+    // Helper function to invoke handlers
+    template <typename... Handlers, typename... Args>
+    static constexpr void invokeHandlers(meta::Proxy<std::tuple<Handlers...>> /*unused*/, Args&&... args) {
+        (Handlers::func(std::forward<Args>(args)...), ...);
+    }
+
+    template <typename... EventCallbacks, typename... EventArgs>
+    void handleEvent(TgBot::Bot& bot, const StateKey& stateKey, EventArgs... eventArgs) {
+        const TgBot::Api& api = bot.getApi();
+        StateT* const mCurrentState = stateStorage[stateKey];
+        const StateProxy stateProxy{stateStorage, stateKey};
 
         if (mCurrentState) {
             StateT& currentStateRef = *mCurrentState;
-            if constexpr (!isVariantState) {
-                // enum state handlers
-                const StateT currentStateCopy = currentStateRef;
-                std::apply(
-                    [&](auto&&... handlers) {
-                        ((handlers.state == currentStateCopy
-                              ? handlers.handler(bot.getApi(), stateProxy, currentStateRef, message)
-                              : void()),
-                         ...);
-                    },
-                    HandlerHelper::findHandlers(HandlerHelper::enumStateFilter));
-            } else {
-                // variant state handlers
-                std::visit(
-                    [&](auto& state) {
-                        std::apply(
-                            [&](auto&&... handlers) {
-                                (handlers.handler(bot.getApi(), stateProxy, state, message), ...);
-                            },
-                            HandlerHelper::findHandlers(HandlerHelper::template variantStateFilterByState<
-                                                        std::remove_cvref_t<decltype(state)>>));
-                    },
-                    currentStateRef);
-            }
+            std::visit(
+                [&](auto& state) {
+                    using StateOptionT = std::remove_reference_t<decltype(state)>;
+                    constexpr auto stateFilter = HandlerFinder::filterByStateOption<StateOptionT>;
+                    using StateHandlers = HandlerFinder::find<stateFilter, EventCallbacks...>;
+
+                    invokeHandlers(meta::Proxy<StateHandlers>{}, state, eventArgs..., api, stateProxy, dependencies);
+                },
+                currentStateRef);
         } else {
             // no state handlers
-            std::apply([&](auto&&... handlers) { (handlers.handler(bot.getApi(), stateProxy, message), ...); },
-                       HandlerHelper::findHandlers(HandlerHelper::noStateFilter));
+            using NoStateHandlers = HandlerFinder::find<HandlerFinder::noStateFilter, EventCallbacks...>;
+            invokeHandlers(meta::Proxy<NoStateHandlers>{}, eventArgs..., api, stateProxy, dependencies);
         }
         // any state handlers
-        std::apply([&](auto&&... handlers) { (handlers.handler(bot.getApi(), stateProxy, message), ...); },
-                   HandlerHelper::findHandlers(HandlerHelper::anyStateFilter));
+        using AnyStateHandlers = HandlerFinder::find<HandlerFinder::anyStateFilter, EventCallbacks...>;
+        invokeHandlers(meta::Proxy<AnyStateHandlers>{}, eventArgs..., api, stateProxy, dependencies);
+    }
 
-        std::println(std::clog, "{}: Get message from chat {}", std::chrono::system_clock::now(), chatId);
+    static StateKey getKeyFromMessage(const TgBot::Message::Ptr& mp) {
+        if (!mp || !mp->chat)
+            throw std::runtime_error("Null message or chat.");
+
+        const auto chatId = mp->chat->id;
+        const auto threadId = mp->messageThreadId;
+        return {.chatId = chatId};
+    }
+
+    template <typename... EventCallbacks, typename... Args>
+    constexpr void invokeEventHandler(meta::Proxy<std::tuple<EventCallbacks...>> /*unused*/, Args&&... args) {
+        handleEvent<EventCallbacks...>(std::forward<Args>(args)...);
+    }
+
+    void setup(TgBot::Bot& bot) {
+        bot.getEvents().onNonCommandMessage([&](const TgBot::Message::Ptr& mp) {
+            constexpr auto stateFilter = HandlerFinder::filterByEventType<Events::Message>;
+            using EventCallbacks = HandlerFinder::find<stateFilter, Callbacks...>;
+            const StateKey key = getKeyFromMessage(mp);
+
+            invokeEventHandler(meta::Proxy<EventCallbacks>{}, bot, key, *mp);
+            std::println(std::clog, "{}: Get message from chat {}", std::chrono::system_clock::now(), key);
+        });
     }
 
   public:
-    explicit constexpr Stater(const StateStorageT& stateStorage = StateStorageT{}) : stateStorage_{stateStorage} {}
+    explicit constexpr StaterBase(const StateStorageT& stateStorage = StateStorageT{},
+                                  const DependenciesT& dependencies = DependenciesT{})
+        : stateStorage{stateStorage}, dependencies{dependencies} {}
 
-    template <std::same_as<TgBot::Bot> Bot>
-    void start(Bot&& bot) {
-        bot.getEvents().onAnyMessage([&](const TgBot::Message::Ptr& mp) { anyMessageHandler(bot, mp); });
+    // rvalue reference means taking the ownership
+    void start(TgBot::Bot&& bot) { // NOLINT(*-rvalue-reference-param-not-moved)
+        setup(bot);
 
         std::println(std::clog, "Bot has started.");
-        TgBot::TgLongPoll longPoll{std::forward<Bot>(bot)};
+        TgBot::TgLongPoll longPoll{bot};
         while (true) {
             try {
                 longPoll.start();
@@ -135,14 +198,27 @@ class Stater {
     }
 };
 
-template <typename StateT, typename StateStorageT = MemoryStateStorage<StateT>>
+} // namespace detail
+
+// Converts each `Handler` to a `Callback`
+template <concepts::State StateT,
+          concepts::StateStorage<StateT> StateStorageT,
+          typename DependenciesT,
+          typename... Handlers>
+using Stater =
+    detail::StaterBase<StateT,
+                       StateStorageT,
+                       DependenciesT,
+                       typename detail::HandlerValidator<StateT, StateStorageT, DependenciesT, Handlers>::Callback_...>;
+
+template <typename StateT, typename Dependencies = Dependencies<>, typename StateStorageT = MemoryStateStorage<StateT>>
 struct Setup {
-    template <auto... HandlerMetas>
-    using Stater = Stater<StateT, StateStorageT, HandlerMetas...>;
+    template <typename... Handlers>
+    using Stater = Stater<StateT, StateStorageT, Dependencies, Handlers...>;
 };
 
-template <typename StateT, auto... HandlerMetas>
-using DefaultStater = Setup<StateT>::template Stater<HandlerMetas...>;
+template <typename StateT, typename... Handlers>
+using DefaultStater = Setup<StateT>::template Stater<Handlers...>;
 
 } // namespace tg_stater
 #endif // INCLUDE_bot_lib_bot

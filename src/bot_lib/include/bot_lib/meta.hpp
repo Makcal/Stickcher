@@ -106,5 +106,9 @@ struct function_traits<ReturnT (*)(Args...)> : detail::general_function_traits<R
 template <typename ReturnT, typename... Args>
 struct function_traits<ReturnT(Args...)> : function_traits<ReturnT (*)(Args...)> {};
 
+// See https://github.com/cpp-ru/ideas/issues/610 for description
+template <typename>
+struct Proxy {};
+
 } // namespace tg_stater::meta
 #endif // INCLUDE_bot_lib_meta

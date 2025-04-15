@@ -5,16 +5,20 @@
 #include "bot_lib/state.hpp"
 
 #include <concepts>
+#include <cstddef>
+#include <format>
 #include <functional>
 #include <optional>
+#include <ostream>
 #include <utility>
 
 namespace tg_stater {
 
-// NOLINTNEXTLINE (*-pro-type-member-init)
 struct StateKey {
     ChatUserIdT chatId; // if there is no chat, fallback to userId
     std::optional<ThreadIdT> threadId = std::nullopt;
+
+    bool operator==(const StateKey&) const = default;
 };
 
 namespace concepts {
@@ -50,11 +54,11 @@ class StateProxy {
         return key;
     }
 
-    decltype(auto) get() const {
-        return storage.get().get(key);
+    [[nodiscard]] decltype(auto) get() const {
+        return std::as_const(storage).get(key);
     }
 
-    decltype(auto) operator[]() const {
+    [[nodiscard]] decltype(auto) operator[]() const {
         return get();
     }
 
@@ -72,4 +76,38 @@ class StateProxy {
 };
 
 } // namespace tg_stater
+
+template<>
+struct std::hash<tg_stater::StateKey> {
+    std::size_t operator()(const tg_stater::StateKey& key) const {
+        std::size_t h1 = hash<decltype(key.chatId)>{}(key.chatId);
+        std::size_t h2 = hash<decltype(key.threadId)>{}(key.threadId);
+        return h1 ^ (h2 << 1U);
+    }
+};
+
+template<>
+struct std::formatter<tg_stater::StateKey> {
+    template<class ParseContext>
+    constexpr ParseContext::iterator parse(ParseContext& ctx)
+    {
+        auto it = ctx.begin();
+        if (it != ctx.end() && *it != '}')
+            throw std::format_error("Only empty format args are allowed for StateKey.");
+        return it;
+    }
+
+    template<class FmtContext>
+    FmtContext::iterator format(const tg_stater::StateKey& key, FmtContext& ctx) const
+    {
+        std::ostringstream out;
+        out << "{charId=" << key.chatId;
+        if (key.threadId) {
+            out << ", threadId=" << *key.threadId;
+        }
+        out << '}';
+        return std::ranges::copy(std::move(out).str(), ctx.out()).out;
+    }
+};
+
 #endif // INCLUDE_bot_lib_state_storage_common
