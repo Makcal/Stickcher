@@ -44,6 +44,8 @@ target_precompile_headers(main PRIVATE
     <tgbot/Bot.h>
     <tgbot/types/Chat.h>
     <tgbot/types/Message.h>
+    <brigand/algorithms/fold.hpp>
+    <brigand/algorithms/sort.hpp>
     <chrono>
     <concepts>
     <cstddef>

@@ -114,7 +114,7 @@ class Callback {
         static_assert((matches & (matches - 1)) == 0,
                       "Several valid signatures are applicable. This is not supported.");
 
-        return []<typename... EventArgs>(meta::Proxy<std::tuple<EventArgs...>>) { // NOLINT(*-cognitive-complexity)
+        return []<typename... EventArgs>(meta::Proxy<EventArgs...>) { // NOLINT(*-cognitive-complexity)
             if constexpr (!takesState) {
                 return [](const EventArgs&... args, ApiRef api, SProxyRef proxy, DepRef deps) {
                     if constexpr (matches >> 0U == 1) {
@@ -172,7 +172,7 @@ class Callback {
                     };
                 };
             }
-        }(meta::Proxy<typename EventT::Category::CallbackArgs>{});
+        }(meta::TupleToProxy<typename EventT::Category::CallbackArgs>{});
         // NOLINTEND(*-magic-numbers)
     }
 

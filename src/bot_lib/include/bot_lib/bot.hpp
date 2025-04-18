@@ -17,10 +17,11 @@
 
 #include <chrono>
 #include <concepts>
+#include <exception>
 #include <iostream>
 #include <ostream>
 #include <print>
-#include <stdexcept>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -42,7 +43,7 @@ struct HandlerValidator {
     static constexpr bool takesState = concepts::StateOption<FirstArgT, StateT>;
 
   public:
-    using Callback_ = Callback<Handler::f,
+    using CallbackT = Callback<Handler::f,
                                StateT,
                                std::conditional_t<takesState, FirstArgT, NulloptStateOption>,
                                Handler::event,
@@ -52,7 +53,7 @@ struct HandlerValidator {
 };
 
 // CheckIsCallback
-template <typename T>
+template <typename T, typename StateT, typename StateStorageT, typename DependenciesT>
 struct CheckIsCallback : std::false_type {};
 
 // CheckIsCallback
@@ -63,19 +64,21 @@ template <auto F,
           concepts::HandlerType auto HandlerType,
           concepts::StateStorage<StateT> StateStorageT,
           typename DependenciesT>
-struct CheckIsCallback<Callback<F, StateT, StateOptionT, Event, HandlerType, StateStorageT, DependenciesT>>
-    : std::true_type {};
+struct CheckIsCallback<Callback<F, StateT, StateOptionT, Event, HandlerType, StateStorageT, DependenciesT>,
+                       StateT,
+                       StateStorageT,
+                       DependenciesT> : std::true_type {};
 
-struct HandlerFinder {
+struct CallbackFinder {
   private:
-    template <auto F, typename... Callbacks_>
-    struct HandlerFilter;
+    template <auto F, typename... Callbacks>
+    struct CallbackFilter;
 
-    template <auto F, typename Callback, typename... Callbacks_>
-    struct HandlerFilter<F, Callback, Callbacks_...> {
+    template <auto F, typename Callback, typename... Callbacks>
+    struct CallbackFilter<F, Callback, Callbacks...> {
       private:
         static constexpr bool match = F.template operator()<Callback>();
-        using other = HandlerFilter<F, Callbacks_...>::type;
+        using other = CallbackFilter<F, Callbacks...>::type;
 
       public:
         using type =
@@ -85,11 +88,13 @@ struct HandlerFinder {
     };
 
     template <auto F>
-    struct HandlerFilter<F> {
+    struct CallbackFilter<F> {
         using type = std::tuple<>;
     };
 
   public:
+    CallbackFinder() = delete;
+
     static constexpr auto noStateFilter = []<typename Callback>() {
         return std::same_as<typename Callback::TypeT, HandlerTypes::NoState>;
     };
@@ -105,8 +110,8 @@ struct HandlerFinder {
     static constexpr auto filterByEventType =
         []<typename Callback>() { return std::same_as<EventT, typename Callback::EventT>; };
 
-    template <auto Filter, typename... Callbacks_>
-    using find = HandlerFilter<Filter, Callbacks_...>::type;
+    template <auto Filter, typename... Callbacks>
+    using find = CallbackFilter<Filter, Callbacks...>::type;
 };
 
 // Main implementation class.
@@ -114,15 +119,15 @@ template <concepts::State StateT,
           concepts::StateStorage<StateT> StateStorageT,
           typename DependenciesT,
           typename... Callbacks>
-    requires(detail::CheckIsCallback<Callbacks>::value && ...)
+    requires(detail::CheckIsCallback<Callbacks, StateT, StateStorageT, DependenciesT>::value && ...)
 class StaterBase {
     StateStorageT stateStorage;
     DependenciesT dependencies;
 
     // Helper function to invoke handlers
-    template <typename... Handlers, typename... Args>
-    static constexpr void invokeHandlers(meta::Proxy<std::tuple<Handlers...>> /*unused*/, Args&&... args) {
-        (Handlers::func(std::forward<Args>(args)...), ...);
+    template <typename... Callbacks_, typename... Args>
+    static constexpr void invokeCallbacks(meta::Proxy<Callbacks_...> /*unused*/, Args&&... args) {
+        (Callbacks_::func(std::forward<Args>(args)...), ...);
     }
 
     template <typename... EventCallbacks, typename... EventArgs>
@@ -136,51 +141,118 @@ class StaterBase {
             std::visit(
                 [&](auto& state) {
                     using StateOptionT = std::remove_reference_t<decltype(state)>;
-                    constexpr auto stateFilter = HandlerFinder::filterByStateOption<StateOptionT>;
-                    using StateHandlers = HandlerFinder::find<stateFilter, EventCallbacks...>;
-
-                    invokeHandlers(meta::Proxy<StateHandlers>{}, state, eventArgs..., api, stateProxy, dependencies);
+                    constexpr auto stateFilter = CallbackFinder::filterByStateOption<StateOptionT>;
+                    using StateCallbacks = CallbackFinder::find<stateFilter, EventCallbacks...>;
+                    invokeCallbacks(
+                        meta::TupleToProxy<StateCallbacks>{}, state, eventArgs..., api, stateProxy, dependencies);
                 },
                 currentStateRef);
         } else {
             // no state handlers
-            using NoStateHandlers = HandlerFinder::find<HandlerFinder::noStateFilter, EventCallbacks...>;
-            invokeHandlers(meta::Proxy<NoStateHandlers>{}, eventArgs..., api, stateProxy, dependencies);
+            using NoStateCallbacks = CallbackFinder::find<CallbackFinder::noStateFilter, EventCallbacks...>;
+            invokeCallbacks(meta::TupleToProxy<NoStateCallbacks>{}, eventArgs..., api, stateProxy, dependencies);
         }
         // any state handlers
-        using AnyStateHandlers = HandlerFinder::find<HandlerFinder::anyStateFilter, EventCallbacks...>;
-        invokeHandlers(meta::Proxy<AnyStateHandlers>{}, eventArgs..., api, stateProxy, dependencies);
-    }
-
-    static StateKey getKeyFromMessage(const TgBot::Message::Ptr& mp) {
-        if (!mp || !mp->chat)
-            throw std::runtime_error("Null message or chat.");
-
-        const auto chatId = mp->chat->id;
-        const auto threadId = mp->messageThreadId;
-        return {.chatId = chatId};
+        using AnyStateCallbacks = CallbackFinder::find<CallbackFinder::anyStateFilter, EventCallbacks...>;
+        invokeCallbacks(meta::TupleToProxy<AnyStateCallbacks>{}, eventArgs..., api, stateProxy, dependencies);
     }
 
     template <typename... EventCallbacks, typename... Args>
-    constexpr void invokeEventHandler(meta::Proxy<std::tuple<EventCallbacks...>> /*unused*/, Args&&... args) {
+    void handleEventProxy(meta::Proxy<EventCallbacks...> /*unused*/, Args&&... args) {
         handleEvent<EventCallbacks...>(std::forward<Args>(args)...);
     }
 
-    void setup(TgBot::Bot& bot) {
-        bot.getEvents().onNonCommandMessage([&](const TgBot::Message::Ptr& mp) {
-            constexpr auto stateFilter = HandlerFinder::filterByEventType<Events::Message>;
-            using EventCallbacks = HandlerFinder::find<stateFilter, Callbacks...>;
-            const StateKey key = getKeyFromMessage(mp);
+    static void logEvent(std::string_view event_type, const StateKey key) {
+        std::println(
+            std::clog, "{}: Trying to handle {} from chat {}", std::chrono::system_clock::now(), event_type, key);
+    }
 
-            invokeEventHandler(meta::Proxy<EventCallbacks>{}, bot, key, *mp);
-            std::println(std::clog, "{}: Get message from chat {}", std::chrono::system_clock::now(), key);
+    template <typename Callbacks_>
+    auto makeMessageHandler(std::string_view event, TgBot::Bot& bot) {
+        return [&, event](const TgBot::Message::Ptr& mp) {
+            const StateKey key = EventCategories::Message::getStateKey(mp);
+            handleEventProxy(meta::TupleToProxy<Callbacks_>{}, bot, key, *mp);
+            logEvent(event, key);
+        };
+    }
+
+    template <typename EventT>
+    using FindEventCallbacks = CallbackFinder::find<CallbackFinder::filterByEventType<EventT>, Callbacks...>;
+
+    template <typename T>
+    struct GroupCommandCallbacks;
+
+    template <typename... CommandCallbacks>
+    struct GroupCommandCallbacks<std::tuple<CommandCallbacks...>> {
+        using type =
+            meta::group_by<[]<typename C>() { return std::string_view{C::event.command}; }, CommandCallbacks...>;
+    };
+
+    void setup(TgBot::Bot& bot) {
+        bot.getEvents().onNonCommandMessage(
+            makeMessageHandler<FindEventCallbacks<Events::Message>>("non-command message", bot));
+        using Grouped = GroupCommandCallbacks<FindEventCallbacks<Events::Command>>::type;
+        [&]<typename... Groups>(meta::Proxy<Groups...>) {
+            (bot.getEvents().onCommand({std::tuple_element_t<0, Groups>::event.command},
+                                       makeMessageHandler<Groups>("command", bot)),
+             ...);
+        }(meta::TupleToProxy<Grouped>{});
+        bot.getEvents().onUnknownCommand(
+            makeMessageHandler<FindEventCallbacks<Events::UnknownCommand>>("unknown command", bot));
+        bot.getEvents().onAnyMessage(makeMessageHandler<FindEventCallbacks<Events::AnyMessage>>("message", bot));
+        bot.getEvents().onEditedMessage(
+            makeMessageHandler<FindEventCallbacks<Events::EditedMessage>>("message edit", bot));
+        bot.getEvents().onInlineQuery([&](const TgBot::InlineQuery::Ptr& iqp) {
+            const StateKey key = EventCategories::InlineQuery::getStateKey(iqp);
+            handleEventProxy(meta::TupleToProxy<FindEventCallbacks<Events::InlineQuery>>{}, bot, key, *iqp);
+            logEvent("inline query", key);
+        });
+        bot.getEvents().onChosenInlineResult([&](const TgBot::ChosenInlineResult::Ptr& cirp) {
+            const StateKey key = EventCategories::ChosenInlineResult::getStateKey(cirp);
+            handleEventProxy(meta::TupleToProxy<FindEventCallbacks<Events::ChosenInlineResult>>{}, bot, key, *cirp);
+            logEvent("chosen inline result", key);
+        });
+        bot.getEvents().onCallbackQuery([&](const TgBot::CallbackQuery::Ptr& cqp) {
+            const StateKey key = EventCategories::CallbackQuery::getStateKey(cqp);
+            handleEventProxy(meta::TupleToProxy<FindEventCallbacks<Events::CallbackQuery>>{}, bot, key, *cqp);
+            logEvent("callback query", key);
+        });
+        bot.getEvents().onShippingQuery([&](const TgBot::ShippingQuery::Ptr& sqp) {
+            const StateKey key = EventCategories::ShippingQuery::getStateKey(sqp);
+            handleEventProxy(meta::TupleToProxy<FindEventCallbacks<Events::ShippingQuery>>{}, bot, key, *sqp);
+            logEvent("shipping query", key);
+        });
+        bot.getEvents().onPreCheckoutQuery([&](const TgBot::PreCheckoutQuery::Ptr& pcqp) {
+            const StateKey key = EventCategories::PreCheckoutQuery::getStateKey(pcqp);
+            handleEventProxy(meta::TupleToProxy<FindEventCallbacks<Events::PreCheckoutQuery>>{}, bot, key, *pcqp);
+            logEvent("precheckout query", key);
+        });
+        bot.getEvents().onPollAnswer([&](const TgBot::PollAnswer::Ptr& pap) {
+            const StateKey key = EventCategories::PollAnswer::getStateKey(pap);
+            handleEventProxy(meta::TupleToProxy<FindEventCallbacks<Events::PollAnswer>>{}, bot, key, *pap);
+            logEvent("poll answer", key);
+        });
+        bot.getEvents().onMyChatMember([&](const TgBot::ChatMemberUpdated::Ptr& cmup) {
+            const StateKey key = EventCategories::ChatMemberUpdated::getStateKey(cmup);
+            handleEventProxy(meta::TupleToProxy<FindEventCallbacks<Events::MyChatMember>>{}, bot, key, *cmup);
+            logEvent("chat member update for bot", key);
+        });
+        bot.getEvents().onChatMember([&](const TgBot::ChatMemberUpdated::Ptr& cmup) {
+            const StateKey key = EventCategories::ChatMemberUpdated::getStateKey(cmup);
+            handleEventProxy(meta::TupleToProxy<FindEventCallbacks<Events::ChatMember>>{}, bot, key, *cmup);
+            logEvent("chat member update", key);
+        });
+        bot.getEvents().onChatJoinRequest([&](const TgBot::ChatJoinRequest::Ptr& cjrp) {
+            const StateKey key = EventCategories::ChatJoinRequest::getStateKey(cjrp);
+            handleEventProxy(meta::TupleToProxy<FindEventCallbacks<Events::ChatJoinRequest>>{}, bot, key, *cjrp);
+            logEvent("chat join request", key);
         });
     }
 
   public:
-    explicit constexpr StaterBase(const StateStorageT& stateStorage = StateStorageT{},
-                                  const DependenciesT& dependencies = DependenciesT{})
-        : stateStorage{stateStorage}, dependencies{dependencies} {}
+    explicit constexpr StaterBase(StateStorageT stateStorage = StateStorageT{},
+                                  DependenciesT dependencies = DependenciesT{})
+        : stateStorage{std::move(stateStorage)}, dependencies{std::move(dependencies)} {}
 
     // rvalue reference means taking the ownership
     void start(TgBot::Bot&& bot) { // NOLINT(*-rvalue-reference-param-not-moved)
@@ -209,7 +281,7 @@ using Stater =
     detail::StaterBase<StateT,
                        StateStorageT,
                        DependenciesT,
-                       typename detail::HandlerValidator<StateT, StateStorageT, DependenciesT, Handlers>::Callback_...>;
+                       typename detail::HandlerValidator<StateT, StateStorageT, DependenciesT, Handlers>::CallbackT...>;
 
 template <typename StateT, typename Dependencies = Dependencies<>, typename StateStorageT = MemoryStateStorage<StateT>>
 struct Setup {

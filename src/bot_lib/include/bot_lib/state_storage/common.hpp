@@ -15,10 +15,14 @@
 namespace tg_stater {
 
 struct StateKey {
-    ChatUserIdT chatId; // if there is no chat, fallback to userId
+    // If there is no chat, fallback to userId.
+    // If the bot needs to distinguish users in a chat, the developer can implement it by themself.
+    ChatUserIdT chatId;
     std::optional<ThreadIdT> threadId = std::nullopt;
 
-    bool operator==(const StateKey&) const = default;
+    bool operator==(StateKey o) const {
+        return chatId == o.chatId && threadId == o.threadId;
+    }
 };
 
 namespace concepts {
@@ -101,7 +105,7 @@ struct std::formatter<tg_stater::StateKey> {
     FmtContext::iterator format(const tg_stater::StateKey& key, FmtContext& ctx) const
     {
         std::ostringstream out;
-        out << "{charId=" << key.chatId;
+        out << "{chatId=" << key.chatId;
         if (key.threadId) {
             out << ", threadId=" << *key.threadId;
         }

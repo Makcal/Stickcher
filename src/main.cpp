@@ -9,11 +9,13 @@
 /*#include <sqlite_orm/sqlite_orm.h>*/
 #include <tgbot/Bot.h>
 
+#include <format>
 #include <fstream>
 #include <ostream>
 #include <print>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -71,16 +73,22 @@ int main() {
         ss.put(Selection{});
     };
     static constexpr const char help_cmd[] = "help"; // NOLINT(*-c-arrays)
-    auto help = [](const Message& m, const Api& bot, const StateStorage&) {
-        bot.sendMessage(m.chat->id, "This is Selecter bot.");
+    static constexpr const char d_cmd[] = "d";       // NOLINT(*-c-arrays)
+    auto help = [](const Message& m, const Api& bot) { bot.sendMessage(m.chat->id, "This is Selecter bot."); };
+    auto d = [](const Message& m, const Api& bot, const Dep& d) {
+        bot.sendMessage(m.chat->id, std::format("{} messages", d.x));
     };
 
-    tg_stater::Setup<State, Dep>::Stater<Handler<Events::AnyMessage{}, default_, HandlerTypes::NoState{}>,
+    // NOLINTBEGIN(*-decay)
+    tg_stater::Setup<State, Dep>::Stater<Handler<Events::Message{}, default_, HandlerTypes::NoState{}>,
                                          Handler<Events::AnyMessage{}, always, HandlerTypes::AnyState{}>,
                                          Handler<Events::Message{}, select>,
-                                         Handler<Events::Message{}, confirm>
-                                         // Handler<Events::Command{&help_cmd[0]}, help>
-                                         >
+                                         Handler<Events::Message{}, confirm>,
+                                         Handler<Events::Command{help_cmd}, help, HandlerTypes::AnyState{}>,
+                                         Handler<Events::Command{help_cmd}, help, HandlerTypes::AnyState{}>,
+                                         Handler<Events::UnknownCommand{}, help, HandlerTypes::AnyState{}>,
+                                         Handler<Events::Command{d_cmd}, d, HandlerTypes::AnyState{}>>
         stater{};
+    // NOLINTEND(*-decay)
     stater.start(std::move(bot));
 }

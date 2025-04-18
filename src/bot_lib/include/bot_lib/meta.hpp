@@ -1,9 +1,13 @@
 #ifndef INCLUDE_bot_lib_meta
 #define INCLUDE_bot_lib_meta
 
+#include <brigand/algorithms/fold.hpp>
+#include <brigand/algorithms/sort.hpp>
+
 #include <concepts>
-#include <cstddef>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 namespace tg_stater::meta {
@@ -72,9 +76,9 @@ static_assert(is_of_template<someTemplate>::check<someType>::value);
 template <typename T, typename... Ts>
 concept one_of = (std::same_as<T, Ts> || ...);
 
-// function traits
 namespace detail {
 
+// function traits
 template <typename ReturnT_, typename... Args>
 struct general_function_traits {
     using ReturnT = ReturnT_;
@@ -106,9 +110,112 @@ struct function_traits<ReturnT (*)(Args...)> : detail::general_function_traits<R
 template <typename ReturnT, typename... Args>
 struct function_traits<ReturnT(Args...)> : function_traits<ReturnT (*)(Args...)> {};
 
-// See https://github.com/cpp-ru/ideas/issues/610 for description
-template <typename>
+// Inspired by Haskell. See https://github.com/cpp-ru/ideas/issues/610 for description
+template <typename...>
 struct Proxy {};
+
+// Inspired by Haskell DataKind operator (')
+template <auto V>
+using quote = std::integral_constant<decltype(V), V>;
+
+// helper functions for sorting and aggregation
+namespace detail {
+
+template <typename T>
+consteval auto callKey(auto key) {
+    return key.template operator()<T>();
+}
+
+template <typename Key, typename L, typename R>
+using TypeComparator = brigand::bool_<detail::callKey<L>(Key::value) < detail::callKey<R>(Key::value)>;
+
+template <typename T, typename U>
+struct append0 {
+    using type = decltype(std::tuple_cat(std::declval<T>(), std::declval<std::tuple<U>>()));
+};
+
+template <typename T, typename U>
+using append0_t = append0<T, U>::type;
+
+template <typename... Ts>
+struct last;
+
+template <typename T, typename... Ts>
+struct last<T, Ts...> {
+    using type = last<Ts...>::type;
+};
+
+template <typename T>
+struct last<T> {
+    using type = T;
+};
+
+template <typename... Ts>
+using last_t = last<Ts...>::type;
+
+template <typename... Ts>
+struct init;
+
+template <typename... Ts>
+using init_t = init<Ts...>::type;
+
+template <typename T, typename... Ts>
+struct init<T, Ts...> {
+    using type = decltype(tuple_cat(std::declval<std::tuple<T>>(), std::declval<init_t<Ts...>>()));
+};
+
+template <typename T>
+struct init<T> {
+    using type = std::tuple<>;
+};
+
+template <typename T, typename U>
+struct append1;
+
+template <typename... Ts, typename U>
+struct append1<std::tuple<Ts...>, U> {
+    using type = append0_t<init_t<Ts...>, append0_t<last_t<Ts...>, U>>;
+};
+
+template <typename T, typename U>
+using append1_t = append1<T, U>::type;
+
+template <auto Key, typename State, typename Arg>
+concept ShouldStartNewGroup =
+    std::tuple_size_v<State> == 0 ||
+    callKey<std::tuple_element_t<0, std::tuple_element_t<std::tuple_size_v<State> - 1, State>>>(Key) !=
+        callKey<Arg>(Key);
+
+template <typename Key, typename State, typename Arg>
+using GroupByCompose = std::conditional_t<detail::ShouldStartNewGroup<Key::value, State, Arg>,
+                                          detail::append0<State, std::tuple<Arg>>,
+                                          detail::append1<State, Arg>>::type;
+
+} // namespace detail
+
+template <auto Key, typename... Args>
+using sorted =
+    brigand::sort<brigand::list<Args...>, brigand::bind<detail::TypeComparator, quote<Key>, brigand::_1, brigand::_2>>;
+
+template <auto Key, typename... Args>
+using group_by = brigand::fold<sorted<Key, Args...>,
+                               std::tuple<>,
+                               brigand::bind<detail::GroupByCompose, quote<Key>, brigand::_1, brigand::_2>>;
+
+namespace detail {
+
+template <typename T>
+struct TupleToProxyImpl;
+
+template <typename... Args>
+struct TupleToProxyImpl<std::tuple<Args...>> {
+    using type = Proxy<Args...>;
+};
+
+} // namespace detail
+
+template <typename T>
+using TupleToProxy = detail::TupleToProxyImpl<T>::type;
 
 } // namespace tg_stater::meta
 #endif // INCLUDE_bot_lib_meta
