@@ -54,13 +54,12 @@ target_precompile_headers(main PRIVATE
     <unordered_map>
     <utility>)
 
-# target_compile_definitions(main PRIVATE 
-#     __cpp_pack_indexing=0
-#     LIBUUID_CPP20_OR_GREATER=1)
-#
+target_compile_definitions(main PRIVATE 
+    __cpp_pack_indexing=0) # for clang LSP that sees an error in SqliteOrm
+
 target_include_directories(main PRIVATE 
     ${rapidfuzz_INCLUDE_DIRS}
-    ${SqliteOrm_INCLUDE_DIRS}
+    ${sqliteorm_INCLUDE_DIRS}
     ${brigand_INCLUDE_DIRS}
     ${stduuid_INCLUDE_DIRS})
 
