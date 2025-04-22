@@ -1,12 +1,8 @@
 [requires]
 sqlite_orm/1.9
 rapidfuzz/3.1.1
-tgbot/1.8
 stduuid/1.2.3
-brigand/cpp11-1.3.0
-
-[options]
-brigand/*:with_boost=False
+tgbotstater/0.1.0
 
 [generators]
 CMakeDeps

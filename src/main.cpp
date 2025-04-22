@@ -1,10 +1,10 @@
 /*#include "db.hpp"*/
-#include "bot_lib/bot.hpp"
-#include "bot_lib/handler/event.hpp"
-#include "bot_lib/handler/handler.hpp"
-#include "bot_lib/handler/type.hpp"
-#include "bot_lib/state_storage/common.hpp"
-#include "bot_lib/state_storage/memory.hpp"
+#include <tg_stater/bot.hpp>
+#include <tg_stater/handler/event.hpp>
+#include <tg_stater/handler/handler.hpp>
+#include <tg_stater/handler/type.hpp>
+#include <tg_stater/state_storage/common.hpp>
+#include <tg_stater/state_storage/memory.hpp>
 
 /*#include <sqlite_orm/sqlite_orm.h>*/
 #include <tgbot/Bot.h>
@@ -15,7 +15,6 @@
 #include <print>
 #include <sstream>
 #include <string>
-#include <thread>
 #include <utility>
 #include <vector>
 

@@ -32,20 +32,14 @@ add_compile_options(-ftime-report)
 find_package(rapidfuzz REQUIRED)
 find_package(SqliteOrm REQUIRED)
 find_package(stduuid REQUIRED)
-add_subdirectory(src/bot_lib)
+find_package(TgBotStater REQUIRED)
 
 # main program
 add_executable(main src/main.cpp)
 
 # setup
 target_precompile_headers(main PRIVATE
-    <tgbot/tgbot.h>
-    <tgbot/net/TgLongPoll.h>
-    <tgbot/Bot.h>
-    <tgbot/types/Chat.h>
-    <tgbot/types/Message.h>
-    <brigand/algorithms/fold.hpp>
-    <brigand/algorithms/sort.hpp>
+    <tg_stater/bot.hpp>
     <chrono>
     <concepts>
     <cstddef>
@@ -60,17 +54,18 @@ target_precompile_headers(main PRIVATE
     <unordered_map>
     <utility>)
 
-target_compile_definitions(main PRIVATE 
-    __cpp_pack_indexing=0
-    LIBUUID_CPP20_OR_GREATER=1)
-
+# target_compile_definitions(main PRIVATE 
+#     __cpp_pack_indexing=0
+#     LIBUUID_CPP20_OR_GREATER=1)
+#
 target_include_directories(main PRIVATE 
     ${rapidfuzz_INCLUDE_DIRS}
     ${SqliteOrm_INCLUDE_DIRS}
+    ${brigand_INCLUDE_DIRS}
     ${stduuid_INCLUDE_DIRS})
 
 target_link_libraries(main PRIVATE
     ${SqliteOrm_LIBRARIES}
-    bot_lib
+    ${tgbotstater_LIBRARIES}
 )
 
