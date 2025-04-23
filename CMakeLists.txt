@@ -30,12 +30,11 @@ add_compile_options(-ftime-report)
 
 # dependencies
 find_package(rapidfuzz REQUIRED)
-find_package(SqliteOrm REQUIRED)
 find_package(stduuid REQUIRED)
 find_package(TgBotStater REQUIRED)
 
 # main program
-add_executable(main src/main.cpp)
+add_executable(main src/bot/main.cpp)
 
 # setup
 target_precompile_headers(main PRIVATE
@@ -54,17 +53,11 @@ target_precompile_headers(main PRIVATE
     <unordered_map>
     <utility>)
 
-target_compile_definitions(main PRIVATE 
-    __cpp_pack_indexing=0) # for clang LSP that sees an error in SqliteOrm
-
 target_include_directories(main PRIVATE 
     ${rapidfuzz_INCLUDE_DIRS}
-    ${sqliteorm_INCLUDE_DIRS}
-    ${brigand_INCLUDE_DIRS}
     ${stduuid_INCLUDE_DIRS})
 
 target_link_libraries(main PRIVATE
-    ${SqliteOrm_LIBRARIES}
     ${tgbotstater_LIBRARIES}
 )
 
