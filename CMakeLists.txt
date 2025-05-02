@@ -53,10 +53,6 @@ target_precompile_headers(main PRIVATE
     <unordered_map>
     <utility>)
 
-target_include_directories(main PRIVATE 
-    ${rapidfuzz_INCLUDE_DIRS}
-    ${stduuid_INCLUDE_DIRS})
-
 target_link_libraries(main PRIVATE
     ${tgbotstater_LIBRARIES}
 )

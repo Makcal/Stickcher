@@ -2,7 +2,7 @@
 sqlite_orm/1.9
 rapidfuzz/3.1.1
 stduuid/1.2.3
-tgbotstater/0.1.0
+tgbotstater/0.1.2
 
 [generators]
 CMakeDeps
