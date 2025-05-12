@@ -5,6 +5,8 @@
 #include <sqlpp11/postgresql/connection.h>
 #include <sqlpp11/postgresql/connection_config.h>
 
+namespace db {
+
 class DbConfig : public sqlpp::postgresql::connection_config {
   public:
     DbConfig() : connection_config{} {
@@ -21,3 +23,5 @@ inline DbConnection getDb() {
     static const DbConfig config{};
     return sqlpp::postgresql::connection{config};
 }
+
+} // namespace db
