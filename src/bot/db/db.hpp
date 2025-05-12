@@ -15,7 +15,9 @@ class DbConfig : public sqlpp::postgresql::connection_config {
     }
 };
 
-inline auto getDb() {
+using DbConnection = sqlpp::postgresql::connection;
+
+inline DbConnection getDb() {
     static const DbConfig config{};
     return sqlpp::postgresql::connection{config};
 }

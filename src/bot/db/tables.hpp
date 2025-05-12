@@ -133,22 +133,6 @@ namespace tables
   };
   namespace Association_
   {
-    struct Id
-    {
-      struct _alias_t
-      {
-        static constexpr const char _literal[] =  "id";
-        using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
-        template<typename T>
-        struct _member_t
-          {
-            T id;
-            T& operator()() { return id; }
-            const T& operator()() const { return id; }
-          };
-      };
-      using _traits = sqlpp::make_traits<sqlpp::integer, sqlpp::tag::must_not_insert, sqlpp::tag::must_not_update, sqlpp::tag::can_be_null>;
-    };
     struct Text
     {
       struct _alias_t
@@ -200,7 +184,6 @@ namespace tables
   } // namespace Association_
 
   struct Association: sqlpp::table_t<Association,
-               Association_::Id,
                Association_::Text,
                Association_::StickerId,
                Association_::PackId>

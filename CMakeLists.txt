@@ -35,7 +35,7 @@ find_package(stduuid REQUIRED)
 find_package(TgBotStater REQUIRED)
 
 add_custom_target(ddl2cpp
-    COMMAND bash -c "cd ${CMAKE_SOURCE_DIR}/src/bot && \
+    COMMAND bash -c "cd ${CMAKE_SOURCE_DIR}/src/bot/db && \
         python3 ${sqlpp11_PACKAGE_FOLDER_RELEASE}/bin/ddl2cpp \
             --datatype-file=<(echo Text, uuid) init.sql tables.hpp tables && \
         mv tables.hpp.h tables.hpp"
@@ -53,10 +53,14 @@ target_include_directories(main PRIVATE
 
 target_precompile_headers(main PRIVATE
     <tg_stater/bot.hpp>
+    <tgbot/Bot.h>
+    <tgbot/Api.h>
+    <tgbot/types/Message.h>
     <sqlpp11/sqlpp11.h>
     <uuid.h>
     [["db.hpp"]]
     [["tables.hpp"]]
+    [["utils.hpp"]]
 )
 
 target_link_libraries(main PRIVATE
