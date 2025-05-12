@@ -1,5 +1,6 @@
 [requires]
-sqlite_orm/1.9
+sqlpp11/0.64
+libpq/16.8
 rapidfuzz/3.1.1
 stduuid/1.2.3
 tgbotstater/0.1.2

@@ -29,31 +29,40 @@ add_compile_options(-ftime-report)
 # add_compile_options(-O0)
 
 # dependencies
-find_package(rapidfuzz REQUIRED)
+find_package(Sqlpp11 REQUIRED)
+find_package(PostgreSQL REQUIRED)
 find_package(stduuid REQUIRED)
 find_package(TgBotStater REQUIRED)
+
+add_custom_target(ddl2cpp
+    COMMAND bash -c "cd ${CMAKE_SOURCE_DIR}/src/bot && \
+        python3 ${sqlpp11_PACKAGE_FOLDER_RELEASE}/bin/ddl2cpp \
+            --datatype-file=<(echo Text, uuid) init.sql tables.hpp tables && \
+        mv tables.hpp.h tables.hpp"
+    COMMENT "Convert SQL DDL to C++ header"
+    VERBATIM
+)
 
 # main program
 add_executable(main src/bot/main.cpp)
 
 # setup
+target_include_directories(main PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/bot
+)
+
 target_precompile_headers(main PRIVATE
     <tg_stater/bot.hpp>
-    <chrono>
-    <concepts>
-    <cstddef>
-    <fstream>
-    <functional>
-    <iostream>
-    <print>
-    <stdexcept>
-    <string>
-    <tuple>
-    <type_traits>
-    <unordered_map>
-    <utility>)
+    <sqlpp11/sqlpp11.h>
+    <uuid.h>
+    [["db.hpp"]]
+    [["tables.hpp"]]
+)
 
 target_link_libraries(main PRIVATE
+    ${Sqlpp11_LIBRARIES}
+    ${PostgreSQL_LIBRARIES}
+    ${stduuid_LIBRARIES}
     ${tgbotstater_LIBRARIES}
 )
 
