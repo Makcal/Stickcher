@@ -58,8 +58,8 @@ target_precompile_headers(main PRIVATE
     <tgbot/types/Message.h>
     <sqlpp11/sqlpp11.h>
     <uuid.h>
-    [["db.hpp"]]
-    [["tables.hpp"]]
+    [["db/db.hpp"]]
+    [["db/tables.hpp"]]
     [["utils.hpp"]]
 )
 
