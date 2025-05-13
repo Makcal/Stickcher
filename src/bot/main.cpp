@@ -15,7 +15,7 @@ int main() {
 
     // NOLINTBEGIN(*-decay)
     Setup<State>::Stater<
-        Handler<Events::Message{}, noState, NoState{}>,
+        Handler<Events::AnyMessage{}, noState, NoState{}>,
         Handler<Events::Command{startCmd}, start, AnyState{}>
     > bot;
     // NOLINTEND(*-decay)
