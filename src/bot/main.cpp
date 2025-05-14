@@ -8,7 +8,14 @@ int main() {
     using namespace tg_stater;
     using namespace handlers;
 
-    Setup<State>::Stater<noStateHandler, startHandler, packListButtonHandler, packCreateHandler> bot;
+    Setup<State>::Stater<noStateHandler,
+                         startHandler,
+                         packListButtonHandler,
+                         packCreateHandler,
+                         packCreateButtonHandler,
+                         packViewButtonHandler,
+                         packDeletionButtonHandler>
+        bot;
 
     bot.start(TgBot::Bot{utils::getenvWithError("BOT_TOKEN")});
 }

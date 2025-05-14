@@ -8,10 +8,11 @@
 
 #include <sqlpp11/all_of.h>
 #include <sqlpp11/insert.h>
+#include <sqlpp11/remove.h>
 #include <sqlpp11/select.h>
 #include <uuid.h>
 
-#include <print>
+#include <format>
 #include <stdexcept>
 #include <string_view>
 #include <vector>
@@ -49,17 +50,15 @@ class StickerPackRepository {
     static StickerPackWithoutId get(const StickerPackId& packId) {
         tables::StickerPack sp;
         if (const auto& row =
-                getDb()(select(sqlpp::all_of(sp)).from(sp).where(sp.id == uuids::to_string(packId))).front()) {
+                getDb()(select(sqlpp::all_of(sp)).from(sp).where(sp.id == uuids::to_string(packId))).front())
             return StickerPackWithoutId{.name = row.name, .ownerId = row.ownerId};
-        }
         throw std::runtime_error(std::format("StickerPack {} not found", uuids::to_string(packId)));
     }
 
     static StickerPackName getName(const StickerPackId& packId) {
         tables::StickerPack sp;
-        if (const auto& row = getDb()(select(sp.name).from(sp).where(sp.id == uuids::to_string(packId))).front()) {
+        if (const auto& row = getDb()(select(sp.name).from(sp).where(sp.id == uuids::to_string(packId))).front())
             return row.name;
-        }
         throw std::runtime_error(std::format("StickerPack {} not found", uuids::to_string(packId)));
     }
 
@@ -68,6 +67,12 @@ class StickerPackRepository {
         tables::StickerPack sp;
         getDb()(insert_into(sp).set(sp.id = uuids::to_string(packId), sp.name = name, sp.ownerId = ownerId));
         return packId;
+    }
+
+    static void deletePack(const StickerPackId& packId) {
+        tables::StickerPack sp;
+        if (getDb()(remove_from(sp).where(sp.id == uuids::to_string(packId))) == 0)
+            throw std::runtime_error(std::format("StickerPack {} not found", uuids::to_string(packId)));
     }
 };
 

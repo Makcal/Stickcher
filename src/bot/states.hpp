@@ -17,9 +17,13 @@ struct PackCreateEnterName {};
 
 struct PackView {
     StickerPackId packId;
+    explicit PackView(StickerPackId packId) : packId{packId} {}
 };
 
-struct PackDeletion {};
+struct PackDeletion {
+    StickerPackId packId;
+    explicit PackDeletion(StickerPackId packId) : packId{packId} {}
+};
 
 struct StickerDeletion {};
 

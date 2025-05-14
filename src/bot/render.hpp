@@ -1,6 +1,5 @@
 #pragma once
 
-#include "db/models.hpp"
 #include "db/pack.hpp"
 #include "types.hpp"
 
@@ -22,8 +21,6 @@ using namespace TgBot;
 using namespace db;
 using namespace db::models;
 
-using BotRef = const Api&;
-
 namespace detail {
 
 template <typename T>
@@ -35,7 +32,7 @@ inline std::shared_ptr<InlineKeyboardButton> makeCallbackButton(std::string_view
     return make_shared(InlineKeyboardButton{.text = std::string(text), .callbackData = std::string(data)});
 }
 
-inline auto makeKeyboardMarkup(InlineKeyboard&& keyboard) {
+inline std::shared_ptr<InlineKeyboardMarkup> makeKeyboardMarkup(InlineKeyboard&& keyboard) {
     auto markup = std::make_shared<InlineKeyboardMarkup>();
     markup->inlineKeyboard = std::move(keyboard);
     return markup;
@@ -43,7 +40,7 @@ inline auto makeKeyboardMarkup(InlineKeyboard&& keyboard) {
 
 } // namespace detail
 
-inline void renderPackListMessage(UserId userId, ChatId chatId, BotRef bot) {
+inline void renderPackList(UserId userId, ChatId chatId, BotRef bot) {
     auto packs = StickerPackRepository::getUserPacks(userId);
 
     InlineKeyboard keyboard(1 + ((packs.size() + 1) / 2)); // ceiling
@@ -57,7 +54,13 @@ inline void renderPackListMessage(UserId userId, ChatId chatId, BotRef bot) {
     bot.sendMessage(chatId, "Your packs:", nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
 }
 
-inline void renderPackView(decltype(StickerPack::id) packId, ChatId chatId, BotRef bot) {
+inline void renderPackNamePrompt(ChatId chatId, BotRef bot) {
+    InlineKeyboard keyboard(1);
+    keyboard[0].push_back(detail::makeCallbackButton("Cancel", "cancel"));
+    bot.sendMessage(chatId, "Enter name:", nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
+}
+
+inline void renderPackView(StickerPackId packId, ChatId chatId, BotRef bot) {
     auto packName = StickerPackRepository::getName(packId);
 
     InlineKeyboard keyboard(2);
@@ -70,6 +73,15 @@ inline void renderPackView(decltype(StickerPack::id) packId, ChatId chatId, BotR
 
     bot.sendMessage(
         chatId, std::format("Pack {}", packName), nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
+}
+
+inline void renderPackDeleteConfirmation(ChatId chatId, BotRef bot) {
+    InlineKeyboard keyboard(1);
+    keyboard[0].reserve(2);
+    keyboard[0].push_back(detail::makeCallbackButton("Cancel", "cancel"));
+    keyboard[0].push_back(detail::makeCallbackButton("Yes", "confirm"));
+    bot.sendMessage(
+        chatId, "Are you sure to delete this pack?", nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
 }
 
 } // namespace render
