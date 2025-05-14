@@ -1,59 +1,85 @@
 #pragma once
 
 #include "db/pack.hpp"
+#include "render.hpp"
 #include "states.hpp"
-#include "types.hpp"
 
-#include <memory>
-#include <string>
+#include <tg_stater/handler/event.hpp>
+#include <tg_stater/handler/handler.hpp>
+#include <tg_stater/handler/type.hpp>
 #include <tgbot/Api.h>
+#include <tgbot/types/CallbackQuery.h>
 #include <tgbot/types/Message.h>
-
-#include <ranges>
-#include <utility>
 #include <uuid.h>
+
+#include <string>
 
 namespace handlers {
 // NOLINTBEGIN(*-avoid-c-arrays)
+// NOLINTBEGIN(*-decay)
 
 using namespace TgBot;
 using namespace tg_stater;
-using namespace states;
-using namespace db;
+using NoState = HandlerTypes::NoState;
+using AnyState = HandlerTypes::AnyState;
 
-constexpr auto noState = [](const Message& m, const Api& bot) {
+using namespace states;
+using namespace render;
+
+using MessageRef = const Message&;
+using CallbackQueryRef = const CallbackQuery&;
+using BotRef = const Api&;
+using SMRef = const StateManager&;
+
+namespace detail {
+
+inline bool filterPublicMessage(MessageRef m, BotRef bot) {
+    if (!m.from || m.chat->id != m.from->id) {
+        bot.sendMessage(m.chat->id, "Setup stickers in private messages");
+        return true;
+    }
+    return false;
+}
+
+} // namespace detail
+
+constexpr auto handleNoState = [](MessageRef m, BotRef bot) {
     if (m.text.starts_with("/start"))
         return;
-    if (!m.from || m.chat->id != m.from->id) {
-        bot.sendMessage(m.chat->id, "Setup stickers in private messages");
+    if (detail::filterPublicMessage(m, bot))
         return;
-    }
     bot.sendMessage(m.chat->id, "Use /start please");
 };
+using noStateHandler = Handler<Events::AnyMessage{}, handleNoState, NoState{}>;
 
 constexpr char startCmd[] = "start";
-constexpr auto start = [](const Message& m, const Api& bot, const StateManager& stateManager) {
-    if (!m.from || m.chat->id != m.from->id) {
-        bot.sendMessage(m.chat->id, "Setup stickers in private messages");
+constexpr auto start = [](MessageRef m, BotRef bot, SMRef stateManager) {
+    if (detail::filterPublicMessage(m, bot))
+        return;
+    stateManager.put(PackList{});
+    renderPackListMessage(m.from->id, m.chat->id, bot);
+};
+using startHandler = Handler<Events::Command{startCmd}, start, AnyState{}>;
+
+constexpr auto packListButtonCallback = [](PackList&, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
+    bot.answerCallbackQuery(cq.id);
+    if (cq.data == "create") {
+        stateManager.put(PackCreateEnterName{});
+        bot.sendMessage(cq.message->chat->id, "Enter name:");
         return;
     }
-
-    stateManager.put(PackList{});
-    auto packs = StickerPackRepository::getUserPacks(m.from->id);
-
-    InlineKeyboard keyboard((packs.size() + 1) / 2); // ceiling
-    for (auto [i, p] : std::views::enumerate(packs)) {
-        if (i % 2 == 0)
-            keyboard[i / 2].reserve(2);
-        keyboard[i / 2].push_back(std::make_shared<InlineKeyboardButton>(
-            InlineKeyboardButton{.text = std::move(p.name), .callbackData = uuids::to_string(p.id)}));
-    }
-    InlineKeyboardMarkup markup;
-    markup.inlineKeyboard = std::move(keyboard);
-
-    bot.sendMessage(
-        m.chat->id, "Your packs:", nullptr, nullptr, std::make_shared<InlineKeyboardMarkup>(std::move(markup)));
+    stateManager.put(PackView{});
+    renderPackView(*uuids::uuid::from_string(cq.data), cq.message->chat->id, bot);
 };
+using packListButtonHandler = Handler<Events::CallbackQuery{}, packListButtonCallback>;
 
+constexpr auto createPack = [](PackCreateEnterName&, MessageRef m, BotRef bot, SMRef stateManager) {
+    StickerPackRepository::create(m.text, m.from->id);
+    stateManager.put(PackList{});
+    renderPackListMessage(m.from->id, m.chat->id, bot);
+};
+using packCreateHandler = Handler<Events::Message{}, createPack>;
+
+// NOLINTEND(*-decay)
 // NOLINTEND(*-avoid-c-arrays)
 } // namespace handlers

@@ -1,12 +1,13 @@
 #pragma once
 
-#include "types.hpp"
-
+#include <tg_stater/tg_types.hpp>
 #include <uuid.h>
 
 #include <string>
 
 namespace db::models {
+
+using UserId = tg_stater::UserIdT;
 
 struct Sticker {
     std::string fileUniqueId;

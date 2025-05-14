@@ -1,6 +1,6 @@
 #pragma once
 
-#include "db/models.hpp"
+#include "types.hpp"
 
 #include <tg_stater/state_storage/common.hpp>
 #include <tg_stater/state_storage/memory.hpp>
@@ -16,7 +16,7 @@ struct PackList {};
 struct PackCreateEnterName {};
 
 struct PackView {
-    decltype(StickerPack::id) packId;
+    StickerPackId packId;
 };
 
 struct PackDeletion {};
