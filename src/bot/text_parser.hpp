@@ -10,7 +10,7 @@ class TextParser {
   public:
     explicit TextParser(std::string_view apiUrl) : apiUrl(apiUrl) {}
 
-    [[nodiscard]] std::string parse(std::string_view image) const {
+    std::string parse(std::string_view image) const {
         return "stub";
     }
 };
