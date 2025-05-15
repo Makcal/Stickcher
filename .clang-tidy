@@ -1,0 +1,36 @@
+Checks: "*,
+        -llvmlibc*,
+        -zircon-*,
+        -altera-*,
+        -fuchsia-overloaded-operator,
+        -fuchsia-default-arguments-declarations,
+        -fuchsia-default-arguments-calls,
+        -fuchsia-statically-constructed-objects,
+        -android-cloexec-fopen,
+
+        -cert-msc51-cpp,
+        -cert-msc32-c,
+        -cert-msc50-cpp,
+        -cert-msc30-c,
+
+        -google-readability-todo,
+        -google-readability-braces-around-statements,
+        -hicpp-braces-around-statements,
+        -readability-static-accessed-through-instance,
+        -readability-identifier-length,
+
+        -google-runtime-int,
+        -google-build-using-namespace,
+        -modernize-use-trailing-return-type,
+        -concurrency-mt-unsafe,
+        -cppcoreguidelines-owning-memory,
+        -cppcoreguidelines-pro-bounds-constant-array-index,
+        -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+        -cppcoreguidelines-avoid-do-while,
+        -bugprone-easily-swappable-parameters,
+        -misc-non-private-member-variables-in-classes,"
+CheckOptions:
+  cppcoreguidelines-pro-type-member-init.IgnoreArrays: true
+  readability-implicit-bool-conversion.AllowPointerConditions: true
+  readability-braces-around-statements.ShortStatementLines: 3
+FormatStyle: none
