@@ -1,4 +1,5 @@
 #include "handlers.hpp"
+#include "states.hpp"
 #include "utils.hpp"
 
 #include <tg_stater/bot.hpp>
@@ -7,6 +8,7 @@
 int main() {
     using namespace tg_stater;
     using namespace handlers;
+    using namespace states;
 
     Setup<State>::Stater<noStateHandler,
                          startHandler,
