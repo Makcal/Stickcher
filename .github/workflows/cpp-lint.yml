@@ -2,9 +2,9 @@ name: C++ Linting
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, sna_project]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, sna_project]
 
 jobs:
   clang-tidy:
