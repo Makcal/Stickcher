@@ -19,5 +19,6 @@ int main() {
                          packDeletionButtonHandler>
         bot;
 
+    cout << "aboba";
     bot.start(TgBot::Bot{utils::getenvWithError("BOT_TOKEN")});
 }
