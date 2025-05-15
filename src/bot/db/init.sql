@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS sticker_pack (
     name TEXT NOT NULL,
     owner_id BIGINT NOT NULL
 );
-CREATE INDEX ON sticker_pack USING btree (owner_id, name);
+CREATE INDEX ON sticker_pack USING btree (owner_id);
 
 CREATE TABLE IF NOT EXISTS association (
     text TEXT NOT NULL,
