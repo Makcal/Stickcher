@@ -18,13 +18,13 @@ class StickerRepository {
         tables::Sticker s;
         db(insert_into(s).set(s.fileId = state.stickerFileId, s.fileUniqueId = state.stickerFileUniqueId));
 
-        tables::Association as;
-        auto associationInsert = insert_into(as).columns(as.packId, as.stickerId, as.text);
+        tables::Tag t;
+        auto tagInsert = insert_into(t).columns(t.packId, t.stickerId, t.text);
         for (const auto& tag : state.tags) {
-            associationInsert.values.add(
-                as.packId = uuids::to_string(state.packId), as.stickerId = state.stickerFileUniqueId, as.text = tag);
+            tagInsert.values.add(
+                t.packId = uuids::to_string(state.packId), t.stickerId = state.stickerFileUniqueId, t.text = tag);
         }
-        db(associationInsert);
+        db(tagInsert);
     }
 };
 
