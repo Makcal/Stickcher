@@ -1,0 +1,31 @@
+# General development files
+.dockerignore
+.git
+.gitignore
+.github
+.env.example
+
+# Build artifacts
+CMakeCache.txt
+CMakeFiles/
+*.cmake
+Makefile
+
+# Documentation
+README.md
+LICENSE
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local environment files
+.env
+*.local
+
+# Temporary files
+*.tmp
+*.log
+*.bak
