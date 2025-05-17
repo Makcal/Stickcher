@@ -30,19 +30,16 @@ jobs:
     - name: Install Conan
       run: pip install conan
 
-    # Run Conan commands (will use cached packages if available)
+      # Run Conan commands (will use cached packages if available)
     - name: Build and install dependencies
       run: |
+        conan profile detect
+        sed -i 's/compiler.cppstd=.*/compiler.cppstd=23/' ~/.conan2/profiles/default
+        git clone --branch v0.3.2 --single-branch https://github.com/Makcal/TgBotStater.git
+        cd TgBotStater
         conan create . --build=missing
         cd ..
         conan install . -of build --build=missing
-
-    - name: Set up compile_commands.json
-      run: |
-        git clone --branch v0.3.2 --single-branch https://github.com/Makcal/TgBotStater.git
-        cd TgBotStater
-        conan profile detect
-        sed -i 's/compiler.cppstd=.*/compiler.cppstd=23/' ~/.conan2/profiles/default
 
     - name: Generate compile_commands.json
       run: cmake -B build --fresh --preset=conan-release
