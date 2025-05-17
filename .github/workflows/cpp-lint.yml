@@ -7,17 +7,35 @@ on:
     branches: [main, sna_project]
 
 jobs:
-  clang-tidy:
+  lint: 
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install dependencies
+    # Setup Python (required for Conan)
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    # Cache Conan dependencies (stores packages in ~/.conan2)
+    - name: Cache Conan packages
+      id: cache-conan
+      uses: actions/cache@v3
+      with:
+        path: ~/.conan2
+        key: ${{ runner.os }}-conan-${{ hashFiles('conanfile.py', 'conanfile.txt') }}
+
+    # Install Conan (if not cached)
+    - name: Install Conan
+      run: pip install conan
+
+    # Run Conan commands (will use cached packages if available)
+    - name: Build and install dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y clang-tidy
-        sudo apt-get install pip
-        pip install conan
+        conan create . --build=missing
+        cd ..
+        conan install . -of build --build=missing
 
     - name: Set up compile_commands.json
       run: |
@@ -25,10 +43,9 @@ jobs:
         cd TgBotStater
         conan profile detect
         sed -i 's/compiler.cppstd=.*/compiler.cppstd=23/' ~/.conan2/profiles/default
-        conan create . --build=missing
-        cd ..
-        conan install . -of build --build=missing
-        cmake -B build --fresh --preset=conan-release
+
+    - name: Generate compile_commands.json
+    - run: cmake -B build --fresh --preset=conan-release
 
     - name: Move compilation database to root
       run: mv build/compile_commands.json .
@@ -40,3 +57,4 @@ jobs:
           -exec clang-tidy {} --quiet \
           --warnings-as-errors='*' \
           --config-file=".clang-tidy" \;
+          
