@@ -2,9 +2,9 @@ name: C++ Linting
 
 on:
   push:
-    branches: [ main, sna_project]
+    branches: [main, sna_project]
   pull_request:
-    branches: [ main, sna_project]
+    branches: [main, sna_project]
 
 jobs:
   clang-tidy:
@@ -39,7 +39,7 @@ jobs:
         find src include -type f \( -name '*.cpp' -o -name '*.hpp' -o -name '*.h' \) \
           -exec clang-tidy {} --quiet \
           --warnings-as-errors='*' \
-          --config-file="$(pwd)/.clang-tidy" \;
+          --config-file=".clang-tidy" \;
 
     # Optional: Add compilation step to ensure clang-tidy has compilation database
     - name: Generate compile_commands.json
@@ -48,11 +48,12 @@ jobs:
         cd build
         cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
         mv compile_commands.json ..
+        cd ..
 
     - name: Run clang-tidy with compilation database
       run: |
         find src include -type f \( -name '*.cpp' -o -name '*.hpp' -o -name '*.h' \) \
           -exec clang-tidy {} --quiet \
           --warnings-as-errors='*' \
-          --config-file="$(pwd)/.clang-tidy" \
+          --config-file=".clang-tidy" \
           -p "$(pwd)" \;
