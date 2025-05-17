@@ -1,0 +1,32 @@
+services:
+  tg-bot:
+    build: .
+    environment:
+      DB_HOST: db
+      BOT_TOKEN:
+      DB_NAME:
+      DB_USER:
+      DB_PASSWORD:
+      TEXT_PARSER_URL:
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db:/var/lib/postgresql/data
+      - ./src/bot/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db:
+
