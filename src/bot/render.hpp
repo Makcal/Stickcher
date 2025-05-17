@@ -3,8 +3,8 @@
 #include "db/pack.hpp"
 #include "states.hpp"
 #include "types.hpp"
+#include "utils.hpp"
 
-#include <optional>
 #include <tgbot/Api.h>
 #include <tgbot/types/CallbackQuery.h>
 #include <tgbot/types/InlineKeyboardButton.h>
@@ -13,6 +13,7 @@
 
 #include <format>
 #include <memory>
+#include <optional>
 #include <ranges>
 #include <string>
 #include <string_view>
@@ -27,13 +28,8 @@ using namespace db::models;
 
 namespace detail {
 
-template <typename T>
-std::shared_ptr<T> make_shared(T&& t) {
-    return std::make_shared<T>(std::forward<T>(t));
-}
-
 inline std::shared_ptr<InlineKeyboardButton> makeCallbackButton(std::string_view text, std::string_view data) {
-    return make_shared(InlineKeyboardButton{.text = std::string(text), .callbackData = std::string(data)});
+    return utils::make_shared(InlineKeyboardButton{.text = std::string(text), .callbackData = std::string(data)});
 }
 
 inline std::shared_ptr<InlineKeyboardMarkup> makeKeyboardMarkup(InlineKeyboard&& keyboard) {
