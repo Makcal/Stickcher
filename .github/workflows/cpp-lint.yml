@@ -23,6 +23,16 @@ jobs:
         cd build
         cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
 
+    - name: Set up compile_commands.json
+      run: |
+        git clone --branch v0.3.2 --single-branch https://github.com/Makcal/TgBotStater.git
+        cd TgBotStarter
+        conan create . --build=missing
+        cd ..
+        conan install . -of build --build=missing
+        cmake -B build --fresh --preset=conan-release
+          
+
     - name: Move compilation database to root
       run: mv build/compile_commands.json .
 
