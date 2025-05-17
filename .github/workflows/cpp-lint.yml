@@ -17,12 +17,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y clang-tidy
 
-    - name: Configure CMake (generates compile_commands.json)
-      run: |
-        mkdir -p build
-        cd build
-        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
-
     - name: Set up compile_commands.json
       run: |
         git clone --branch v0.3.2 --single-branch https://github.com/Makcal/TgBotStater.git
