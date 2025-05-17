@@ -20,7 +20,7 @@ jobs:
     - name: Set up compile_commands.json
       run: |
         git clone --branch v0.3.2 --single-branch https://github.com/Makcal/TgBotStater.git
-        cd TgBotStarter
+        cd TgBotStater
         conan create . --build=missing
         cd ..
         conan install . -of build --build=missing
