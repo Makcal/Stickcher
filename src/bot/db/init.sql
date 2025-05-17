@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS sticker_pack (
 );
 CREATE INDEX ON sticker_pack USING btree (owner_id);
 
-CREATE TABLE IF NOT EXISTS association (
+CREATE TABLE IF NOT EXISTS tag (
     text TEXT NOT NULL,
     sticker_id TEXT NOT NULL,
     pack_id UUID NOT NULL,
@@ -19,4 +19,4 @@ CREATE TABLE IF NOT EXISTS association (
         ON UPDATE CASCADE ON DELETE CASCADE,
     FOREIGN KEY (pack_id) REFERENCES sticker_pack(id)
 );
-CREATE INDEX ON association USING btree (pack_id) INCLUDE (text, sticker_id);
+CREATE INDEX ON tag USING btree (pack_id) INCLUDE (text, sticker_id);

@@ -131,7 +131,7 @@ namespace tables
       };
     };
   };
-  namespace Association_
+  namespace Tag_
   {
     struct Text
     {
@@ -181,23 +181,23 @@ namespace tables
       };
       using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::require_insert>;
     };
-  } // namespace Association_
+  } // namespace Tag_
 
-  struct Association: sqlpp::table_t<Association,
-               Association_::Text,
-               Association_::StickerId,
-               Association_::PackId>
+  struct Tag: sqlpp::table_t<Tag,
+               Tag_::Text,
+               Tag_::StickerId,
+               Tag_::PackId>
   {
     struct _alias_t
     {
-      static constexpr const char _literal[] =  "association";
+      static constexpr const char _literal[] =  "tag";
       using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
       template<typename T>
       struct _member_t
       {
-        T association;
-        T& operator()() { return association; }
-        const T& operator()() const { return association; }
+        T tag;
+        T& operator()() { return tag; }
+        const T& operator()() const { return tag; }
       };
     };
   };

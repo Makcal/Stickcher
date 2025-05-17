@@ -20,7 +20,7 @@ struct StickerPack {
     UserId ownerId;
 };
 
-struct Association {
+struct Tag {
     std::string text;
     std::string stickerId; // fileUniqueId
     uuids::uuid packId;

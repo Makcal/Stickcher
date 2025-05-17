@@ -1,8 +1,10 @@
 #pragma once
 
 #include "db/pack.hpp"
+#include "db/sticker.hpp"
 #include "render.hpp"
 #include "states.hpp"
+#include "text_parser.hpp"
 #include "types.hpp"
 
 #include <tg_stater/handler/event.hpp>
@@ -10,6 +12,7 @@
 #include <tg_stater/handler/type.hpp>
 #include <tgbot/types/CallbackQuery.h>
 #include <tgbot/types/Message.h>
+#include <tgbot/types/Sticker.h>
 #include <uuid.h>
 
 #include <string>
@@ -17,6 +20,7 @@
 namespace handlers {
 // NOLINTBEGIN(*-avoid-c-arrays)
 // NOLINTBEGIN(*-decay)
+// NOLINTBEGIN(*-named-parameter)
 
 using namespace TgBot;
 using namespace tg_stater;
@@ -40,9 +44,37 @@ inline bool filterPublicMessage(MessageRef m, BotRef bot) {
     return false;
 }
 
+inline void
+processSticker(const StickerPackId& packId, MessageRef m, BotRef bot, SMRef stateManager, const TextParser& parser) {
+    auto chatId = m.chat->id;
+    const auto& sticker = *m.sticker;
+    bool isRegular = sticker.type == TgBot::Sticker::Type::Regular && !sticker.isAnimated && !sticker.isVideo;
+    if (!isRegular && !sticker.thumbnail) {
+        bot.sendMessage(chatId, "Error processing this sticker");
+        renderStickerPrompt(chatId, bot);
+        return;
+    }
+
+    auto imageId = isRegular ? sticker.fileId : sticker.thumbnail->fileId;
+    auto imagePtr = bot.getFile(imageId);
+    if (!imagePtr) {
+        bot.sendMessage(chatId, "Error processing this sticker");
+        renderStickerPrompt(chatId, bot);
+        return;
+    }
+    std::string image = bot.downloadFile(imagePtr->filePath);
+
+    std::string parsedText = parser.parse(image);
+    if (parsedText.empty())
+        stateManager.put(TagAddition{packId, sticker.fileId, sticker.fileUniqueId});
+    else
+        stateManager.put(TagAddition{packId, sticker.fileId, sticker.fileUniqueId, parsedText});
+    renderTagPrompt(std::get<TagAddition>(*stateManager.get()), chatId, bot);
+}
+
 } // namespace detail
 
-constexpr auto handleNoState = [](MessageRef m, BotRef bot) {
+inline void handleNoState(MessageRef m, BotRef bot) {
     if (m.text.starts_with("/start"))
         return;
     if (detail::filterPublicMessage(m, bot))
@@ -52,7 +84,7 @@ constexpr auto handleNoState = [](MessageRef m, BotRef bot) {
 using noStateHandler = Handler<Events::AnyMessage{}, handleNoState, NoState{}>;
 
 constexpr char startCmd[] = "start";
-constexpr auto start = [](MessageRef m, BotRef bot, SMRef stateManager) {
+inline void start(MessageRef m, BotRef bot, SMRef stateManager) {
     if (detail::filterPublicMessage(m, bot))
         return;
     stateManager.put(PackList{});
@@ -60,7 +92,7 @@ constexpr auto start = [](MessageRef m, BotRef bot, SMRef stateManager) {
 };
 using startHandler = Handler<Events::Command{startCmd}, start, AnyState{}>;
 
-constexpr auto packListButtonCallback = [](PackList&, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
+inline void packListButtonCallback(PackList&, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
     bot.answerCallbackQuery(cq.id);
     if (cq.data == "create") {
         stateManager.put(PackCreateEnterName{});
@@ -73,21 +105,23 @@ constexpr auto packListButtonCallback = [](PackList&, CallbackQueryRef cq, BotRe
 };
 using packListButtonHandler = Handler<Events::CallbackQuery{}, packListButtonCallback>;
 
-constexpr auto createPack = [](PackCreateEnterName&, MessageRef m, BotRef bot, SMRef stateManager) {
+inline void createPack(PackCreateEnterName&, MessageRef m, BotRef bot, SMRef stateManager) {
     StickerPackRepository::create(m.text, m.from->id);
     stateManager.put(PackList{});
     renderPackList(m.from->id, m.chat->id, bot);
 };
 using packCreateHandler = Handler<Events::Message{}, createPack>;
 
-constexpr auto cancelPackCreation = [](PackCreateEnterName&, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
+inline void cancelPackCreation(PackCreateEnterName&, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
     bot.answerCallbackQuery(cq.id);
-    stateManager.put(PackList{});
-    renderPackList(cq.from->id, cq.message->chat->id, bot);
+    if (cq.data == "cancel") {
+        stateManager.put(PackList{});
+        renderPackList(cq.from->id, cq.message->chat->id, bot);
+    }
 };
 using packCreateButtonHandler = Handler<Events::CallbackQuery{}, cancelPackCreation>;
 
-constexpr auto packViewButtonCallback = [](PackView& state, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
+inline void packViewButtonCallback(PackView& state, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
     bot.answerCallbackQuery(cq.id);
     auto userId = cq.from->id;
     auto chatId = cq.message->chat->id;
@@ -102,6 +136,8 @@ constexpr auto packViewButtonCallback = [](PackView& state, CallbackQueryRef cq,
         return;
     }
     if (cq.data == "add_sticker") {
+        stateManager.put(StickerAddition{state.packId});
+        renderStickerPrompt(chatId, bot);
         return;
     }
     if (cq.data == "delete_sticker") {
@@ -110,21 +146,90 @@ constexpr auto packViewButtonCallback = [](PackView& state, CallbackQueryRef cq,
 };
 using packViewButtonHandler = Handler<Events::CallbackQuery{}, packViewButtonCallback>;
 
-constexpr auto packDeletionButtonCallback =
-    [](PackDeletion& state, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
-        auto packId = state.packId;
-        bot.answerCallbackQuery(cq.id);
-        if (cq.data == "cancel") {
-            stateManager.put(PackView{packId});
-            renderPackView(packId, cq.message->chat->id, bot);
-            return;
-        }
-        StickerPackRepository::deletePack(packId);
+inline void packDeletionButtonCallback(PackDeletion& state, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
+    bot.answerCallbackQuery(cq.id);
+    if (cq.data == "cancel") {
+        renderPackView(state.packId, cq.message->chat->id, bot);
+        stateManager.put(PackView{state.packId});
+        return;
+    }
+    if (cq.data == "confirm") {
+        StickerPackRepository::deletePack(state.packId);
         stateManager.put(PackList{});
         renderPackList(cq.from->id, cq.message->chat->id, bot);
-    };
+    }
+};
 using packDeletionButtonHandler = Handler<Events::CallbackQuery{}, packDeletionButtonCallback>;
 
+inline void cancelStickerAddition(StickerAddition& state, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
+    bot.answerCallbackQuery(cq.id);
+    if (cq.data == "cancel") {
+        renderPackView(state.packId, cq.message->chat->id, bot);
+        stateManager.put(PackView{state.packId});
+    }
+};
+using stickerAdditionButtonHandler = Handler<Events::CallbackQuery{}, cancelStickerAddition>;
+
+inline void addSticker(StickerAddition& state, MessageRef m, BotRef bot, SMRef stateManager, const TextParser& parser) {
+    auto chatId = m.chat->id;
+    if (!m.sticker) {
+        renderStickerPrompt(chatId, bot);
+        return;
+    }
+    detail::processSticker(state.packId, m, bot, stateManager, parser);
+};
+using stickerAdditionHandler = Handler<Events::Message{}, addSticker>;
+
+inline void tagAdditionButtonCallback(TagAddition& state, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
+    bot.answerCallbackQuery(cq.id);
+    auto chatId = cq.message->chat->id;
+    if (cq.data == "cancel") {
+        renderPackView(state.packId, chatId, bot);
+        stateManager.put(PackView{state.packId});
+        return;
+    }
+    if (cq.data == "done") {
+        if (state.tags.empty()) {
+            bot.sendMessage(chatId, "You can't add a sticker without a tag");
+            renderTagPrompt(state, chatId, bot);
+        } else {
+            StickerRepository::create(state);
+            bot.sendMessage(chatId, "Sticker added");
+            renderPackView(state.packId, chatId, bot);
+            stateManager.put(PackView{state.packId});
+        }
+        return;
+    }
+    if (cq.data == "delete_recognized") {
+        state.hasParsedTag = false;
+        state.tags.erase(state.tags.begin());
+        renderTagPrompt(state, chatId, bot, cq.message->messageId);
+        return;
+    }
+};
+using tagAdditionButtonHandler = Handler<Events::CallbackQuery{}, tagAdditionButtonCallback>;
+
+inline void
+processTagMessage(TagAddition& state, MessageRef m, BotRef bot, SMRef stateManager, const TextParser& parser) {
+    auto chatId = m.chat->id;
+    if (!m.sticker) {
+        if (!m.text.empty())
+            state.tags.push_back(m.text);
+        renderTagPrompt(state, chatId, bot);
+        return;
+    }
+    if (state.tags.empty()) {
+        bot.sendMessage(chatId, "You can't add a sticker without a tag");
+        renderTagPrompt(state, chatId, bot);
+        return;
+    }
+    StickerRepository::create(state);
+    bot.sendMessage(chatId, "Sticker added");
+    detail::processSticker(state.packId, m, bot, stateManager, parser);
+};
+using tagAdditionHandler = Handler<Events::Message{}, processTagMessage>;
+
+// NOLINTEND(*-named-parameter)
 // NOLINTEND(*-decay)
 // NOLINTEND(*-avoid-c-arrays)
 } // namespace handlers

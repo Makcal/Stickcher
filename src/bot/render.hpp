@@ -1,8 +1,10 @@
 #pragma once
 
 #include "db/pack.hpp"
+#include "states.hpp"
 #include "types.hpp"
 
+#include <optional>
 #include <tgbot/Api.h>
 #include <tgbot/types/CallbackQuery.h>
 #include <tgbot/types/InlineKeyboardButton.h>
@@ -12,8 +14,10 @@
 #include <format>
 #include <memory>
 #include <ranges>
+#include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace render {
 
@@ -82,6 +86,39 @@ inline void renderPackDeleteConfirmation(ChatId chatId, BotRef bot) {
     keyboard[0].push_back(detail::makeCallbackButton("Yes", "confirm"));
     bot.sendMessage(
         chatId, "Are you sure to delete this pack?", nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
+}
+
+inline void renderStickerPrompt(ChatId chatId, BotRef bot) {
+    InlineKeyboard keyboard(1);
+    keyboard[0].push_back(detail::makeCallbackButton("Cancel", "cancel"));
+    bot.sendMessage(chatId, "Send me a sticker", nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
+}
+
+inline void renderTagPrompt(const states::TagAddition& state,
+                            ChatId chatId,
+                            BotRef bot,
+                            std::optional<::MessageId> toEdit = std::nullopt) {
+    InlineKeyboard keyboard(1);
+    keyboard[0].reserve(2);
+    keyboard[0].push_back(detail::makeCallbackButton("Cancel", "cancel"));
+    if (state.tags.size() > 0)
+        keyboard[0].push_back(detail::makeCallbackButton("Done", "done"));
+    if (state.hasParsedTag) {
+        keyboard.emplace(keyboard.begin());
+        keyboard[0].push_back(detail::makeCallbackButton("Delete recogized", "delete_recognized"));
+    }
+
+    using namespace std::views;
+    using std::ranges::to;
+    auto text = std::format("You can add tags to the sticker.\n"
+                            "When you finish, send me a next sticker or press \"Done\".\n"
+                            "Tags:\n{}",
+                            state.tags | join_with('\n') | to<std::string>());
+    if (toEdit) {
+        bot.editMessageText(text, chatId, *toEdit, "", "", nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
+    } else {
+        bot.sendMessage(chatId, text, nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
+    }
 }
 
 } // namespace render

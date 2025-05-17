@@ -1,8 +1,10 @@
 #include "handlers.hpp"
 #include "states.hpp"
+#include "text_parser.hpp"
 #include "utils.hpp"
 
 #include <tg_stater/bot.hpp>
+#include <tg_stater/dependencies.hpp>
 #include <tgbot/Bot.h>
 
 int main() {
@@ -10,14 +12,18 @@ int main() {
     using namespace handlers;
     using namespace states;
 
-    Setup<State>::Stater<noStateHandler,
-                         startHandler,
-                         packListButtonHandler,
-                         packCreateHandler,
-                         packCreateButtonHandler,
-                         packViewButtonHandler,
-                         packDeletionButtonHandler>
-        bot;
+    Setup<State, Dependencies<TextParser>>::Stater<noStateHandler,
+                                                   startHandler,
+                                                   packListButtonHandler,
+                                                   packCreateHandler,
+                                                   packCreateButtonHandler,
+                                                   packViewButtonHandler,
+                                                   packDeletionButtonHandler,
+                                                   stickerAdditionButtonHandler,
+                                                   stickerAdditionHandler,
+                                                   tagAdditionButtonHandler,
+                                                   tagAdditionHandler>
+        bot{{}, {TextParser{utils::getenvWithError("TEXT_PARSER_URL")}}};
 
     cout << "aboba";
     bot.start(TgBot::Bot{utils::getenvWithError("BOT_TOKEN")});
