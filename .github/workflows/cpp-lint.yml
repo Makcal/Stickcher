@@ -23,6 +23,7 @@ jobs:
       run: |
         git clone --branch v0.3.2 --single-branch https://github.com/Makcal/TgBotStater.git
         cd TgBotStater
+        conan profile detect
         conan create . --build=missing
         cd ..
         conan install . -of build --build=missing
