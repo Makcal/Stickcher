@@ -3,7 +3,7 @@ sqlpp11/0.64
 libpq/16.8
 rapidfuzz/3.1.1
 stduuid/1.2.3
-tgbotstater/0.3.1
+tgbotstater/0.3.2
 
 [generators]
 CMakeDeps
