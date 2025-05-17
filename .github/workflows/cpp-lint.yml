@@ -12,10 +12,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install clang-tidy
+    - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y clang-tidy
+        sudo apt=get isntall conan
 
     - name: Set up compile_commands.json
       run: |
