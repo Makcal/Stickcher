@@ -24,7 +24,7 @@ jobs:
         git clone --branch v0.3.2 --single-branch https://github.com/Makcal/TgBotStater.git
         cd TgBotStater
         conan profile detect
-        conan create . --build=missing
+        conan create . --build=missing -s compiler.cppstd=20
         cd ..
         conan install . -of build --build=missing
         cmake -B build --fresh --preset=conan-release
