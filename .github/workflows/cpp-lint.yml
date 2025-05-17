@@ -16,7 +16,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y clang-tidy
-        sudo apt=get isntall conan
+        sudo apt-get isntall conan
 
     - name: Set up compile_commands.json
       run: |
