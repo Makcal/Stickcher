@@ -1,5 +1,6 @@
 [![CI - Deployment](https://github.com/Makcal/Stickcher/actions/workflows/deploy.yml/badge.svg?branch=sna_project)](https://github.com/Makcal/Stickcher/actions/workflows/deploy.yml)
 [![CI - C++ Linting](https://github.com/Makcal/Stickcher/actions/workflows/cpp-lint.yml/badge.svg?branch=sna_project)](https://github.com/Makcal/Stickcher/actions/workflows/cpp-lint.yml)
+[![CI - C++ Tests](https://github.com/Makcal/Stickcher/actions/workflows/tests.yml/badge.svg?branch=sna_project)](https://github.com/Makcal/Stickcher/actions/workflows/tests.yml)
 [![License](https://img.shields.io/github/license/Makcal/Stickcher)](https://github.com/Makcal/Stickcher/blob/main/LICENSE)
 [![GitHub Stars](https://img.shields.io/github/stars/Makcal/Stickcher)](https://github.com/Makcal/Stickcher/stargazers)
 
