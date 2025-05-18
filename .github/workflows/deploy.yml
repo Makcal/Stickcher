@@ -1,0 +1,37 @@
+name: "[API] Build and publish a Docker image"
+
+on:
+  # Allow manual trigger of the workflow
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to deploy to
+        type: environment
+        required: true
+  # Verify build on any push (but only deploy on main)
+  push:
+  # Verify build in pull requests
+  pull_request:
+
+jobs:
+  deploy:
+    # Only on manual trigger or push to main
+    if: github.repository_owner == 'Makcal' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/sna_project'))
+    name: Deploy to server
+    runs-on: ubuntu-latest
+    concurrency:
+      # Set the concurrency group to prevent multiple deployments at once
+      group: 'deploy_main_server'
+      cancel-in-progress: false
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script_stop: true # Stop script on error
+          command_timeout: 30m
+          script: |
+            bash "${{ secrets.DEPLOY_SERVER_SCRIPT }}"
