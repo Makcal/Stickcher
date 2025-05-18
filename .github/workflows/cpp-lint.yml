@@ -7,7 +7,7 @@ on:
     branches: [main, sna_project]
 
 jobs:
-  lint: 
+  lint:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -56,4 +56,4 @@ jobs:
           -exec clang-tidy {} --quiet \
           --warnings-as-errors='*' \
           --config-file=".clang-tidy" \;
-          
+

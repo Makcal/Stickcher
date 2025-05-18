@@ -1,0 +1,12 @@
+FROM postgres:17-alpine
+
+RUN apk add --no-cache bash
+
+RUN mkdir -p /backups
+COPY backup-script.sh /backup-script.sh
+COPY cron-job /etc/cron.d/backup-job
+
+RUN chmod +x /backup-script.sh && \
+    crontab /etc/cron.d/backup-job
+
+CMD ["crond", "-f", "-l", "8"]

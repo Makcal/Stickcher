@@ -1,7 +1,11 @@
 src/scanner/
+nginx/
 
 # General development files
 .dockerignore
+Dockerfile
+docker-compose.yml
+docker-compose*.yml
 .git
 .gitignore
 .github
