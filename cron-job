@@ -1,2 +1,2 @@
-* * * * * /backup-script.sh
+0 5 * * * /backup-script.sh
 
