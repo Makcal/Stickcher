@@ -28,7 +28,7 @@ class StickerRepository {
         db(postgresql::insert_into(s)
                .set(s.fileId = state.stickerFileId, s.fileUniqueId = state.stickerFileUniqueId)
                .on_conflict(s.fileUniqueId)
-               .do_update(s.fileId = state.stickerFileUniqueId));
+               .do_update(s.fileId = state.stickerFileId));
 
         tables::Tag t;
         auto tagInsert = insert_into(t).columns(t.packId, t.stickerId, t.text);
