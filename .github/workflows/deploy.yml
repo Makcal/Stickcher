@@ -34,4 +34,4 @@ jobs:
           script_stop: true # Stop script on error
           command_timeout: 30m
           script: |
-            bash "${{ secrets.DEPLOY_SERVER_SCRIPT }}"
+            bash -c 'if [ ! -f Stickcher/deploy.sh ]; then git clone -b sna_project ${{ github.repositoryUrl }} Stickcher; fi; cd Stickcher; bash deploy.sh'

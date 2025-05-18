@@ -1,12 +1,9 @@
 COMPOSE=docker-compose.yml
+set -e
 
-mkdir -p Stickcher
-cd Stickcher
-if [ -d .git ]; then
-    git checkout sna_project
-    git pull
-    docker-compose -f $COMPOSE down
-else
-    git clone -b sna_project https://github.com/Makcal/Stickcher.git .
-fi
+git checkout sna_project
+git pull
+set +e
+docker-compose -f $COMPOSE down
+set -e
 docker-compose -f $COMPOSE up --build -d
