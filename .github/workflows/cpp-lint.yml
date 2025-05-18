@@ -7,7 +7,7 @@ on:
     branches: [main, sna_project]
 
 jobs:
-  lint: 
+  lint:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -33,8 +33,6 @@ jobs:
       # Run Conan commands (will use cached packages if available)
     - name: Build and install dependencies
       run: |
-        conan profile detect
-        sed -i 's/compiler.cppstd=.*/compiler.cppstd=23/' ~/.conan2/profiles/default
         git clone --branch v0.3.2 --single-branch https://github.com/Makcal/TgBotStater.git
         cd TgBotStater
         conan create . --build=missing
@@ -54,4 +52,4 @@ jobs:
           -exec clang-tidy {} --quiet \
           --warnings-as-errors='*' \
           --config-file=".clang-tidy" \;
-          
+
