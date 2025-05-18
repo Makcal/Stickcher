@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/github/license/Makcal/Stickcher)](https://github.com/Makcal/Stickcher/blob/main/LICENSE)
 [![GitHub Stars](https://img.shields.io/github/stars/Makcal/Stickcher)](https://github.com/Makcal/Stickcher/stargazers)
 
-# Stickcher
+# [Stickcher](t.me/Stickcherbot)
 Searching Telegram stickers is now easier than ever! Index stickers by tags and query them inline!
 
 ## Features
