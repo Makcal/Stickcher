@@ -26,7 +26,7 @@ set(CMAKE_CXX_STANDDARD 23)
 set(CMAKE_CXX_STANDDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_compile_options(-ftime-report)
-# add_compile_options(-O0 -g)
+add_compile_options(-O0 -g)
 
 # dependencies
 find_package(Sqlpp11 REQUIRED)

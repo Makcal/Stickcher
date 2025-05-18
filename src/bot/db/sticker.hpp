@@ -6,7 +6,7 @@
 #include "types.hpp"
 #include "utils.hpp"
 
-#include <sqlpp11/insert.h>
+#include <sqlpp11/postgresql/insert.h>
 #include <sqlpp11/select.h>
 #include <uuid.h>
 
@@ -25,7 +25,10 @@ class StickerRepository {
         auto db = getDb();
 
         tables::Sticker s;
-        db(insert_into(s).set(s.fileId = state.stickerFileId, s.fileUniqueId = state.stickerFileUniqueId));
+        db(postgresql::insert_into(s)
+               .set(s.fileId = state.stickerFileId, s.fileUniqueId = state.stickerFileUniqueId)
+               .on_conflict(s.fileUniqueId)
+               .do_update(s.fileId = state.stickerFileId));
 
         tables::Tag t;
         auto tagInsert = insert_into(t).columns(t.packId, t.stickerId, t.text);
