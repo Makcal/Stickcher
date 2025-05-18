@@ -1,4 +1,4 @@
-name: "[API] Build and publish a Docker image"
+name: "Deploy"
 
 on:
   # Allow manual trigger of the workflow
