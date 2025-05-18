@@ -1,11 +1,13 @@
 src/scanner/
 nginx/
+backups/
 
 # General development files
 .dockerignore
 Dockerfile
 docker-compose.yml
 docker-compose*.yml
+cron-job
 .git
 .gitignore
 .github
