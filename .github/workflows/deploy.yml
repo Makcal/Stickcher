@@ -16,7 +16,7 @@ on:
 jobs:
   deploy:
     # Only on manual trigger or push to main
-    if: github.repository_owner == 'Makcal' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/sna_project'))
+    if: github.repository_owner == 'Makcal' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/sna_project')) && false # temporary disabled
     name: Deploy to server
     runs-on: ubuntu-latest
     concurrency:
