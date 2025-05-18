@@ -75,3 +75,5 @@ target_link_libraries(main PRIVATE
     ${httplib_LIBRARIES}
 )
 
+enable_testing()
+add_subdirectory(src/bot/tests)
