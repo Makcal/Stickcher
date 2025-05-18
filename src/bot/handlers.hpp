@@ -3,19 +3,25 @@
 #include "db/pack.hpp"
 #include "db/sticker.hpp"
 #include "render.hpp"
+#include "settings.hpp"
 #include "states.hpp"
 #include "text_parser.hpp"
 #include "types.hpp"
+#include "utils.hpp"
 
 #include <tg_stater/handler/event.hpp>
 #include <tg_stater/handler/handler.hpp>
 #include <tg_stater/handler/type.hpp>
 #include <tgbot/types/CallbackQuery.h>
+#include <tgbot/types/InlineQuery.h>
 #include <tgbot/types/Message.h>
 #include <tgbot/types/Sticker.h>
 #include <uuid.h>
 
+#include <ranges>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace handlers {
 // NOLINTBEGIN(*-avoid-c-arrays)
@@ -224,10 +230,29 @@ processTagMessage(TagAddition& state, MessageRef m, BotRef bot, SMRef stateManag
         return;
     }
     StickerRepository::create(state);
-    bot.sendMessage(chatId, "Sticker added");
+    bot.sendMessage(chatId, "The previous sticker added");
     detail::processSticker(state.packId, m, bot, stateManager, parser);
 };
 using tagAdditionHandler = Handler<Events::Message{}, processTagMessage>;
+
+inline void searchStickers(const InlineQuery& iq, BotRef bot, const BotSettings& settings) {
+    if (iq.query.empty()) {
+        bot.answerInlineQuery(iq.id, {});
+        return;
+    }
+    auto fileIds =
+        StickerRepository::findAllByTag(iq.from->id, iq.query, settings.similarityThreshold, settings.associationLimit);
+    std::vector<InlineQueryResult::Ptr> results;
+    results.reserve(fileIds.size());
+    for (auto [i, id] : std::views::enumerate(fileIds)) {
+        auto p = utils::make_shared(InlineQueryResultCachedSticker{});
+        p->id = std::to_string(i);
+        p->stickerFileId = std::move(id);
+        results.emplace_back(p);
+    }
+    bot.answerInlineQuery(iq.id, results);
+};
+using inlineSearchHandler = Handler<Events::InlineQuery{}, searchStickers, AnyState{}>;
 
 // NOLINTEND(*-named-parameter)
 // NOLINTEND(*-decay)

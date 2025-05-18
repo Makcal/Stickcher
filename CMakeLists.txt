@@ -33,6 +33,8 @@ find_package(Sqlpp11 REQUIRED)
 find_package(PostgreSQL REQUIRED)
 find_package(stduuid REQUIRED)
 find_package(TgBotStater REQUIRED)
+find_package(rapidfuzz REQUIRED)
+find_package(httplib REQUIRED)
 
 add_custom_target(ddl2cpp
     COMMAND bash -c "cd ${CMAKE_SOURCE_DIR}/src/bot/db && \
@@ -58,6 +60,7 @@ target_precompile_headers(main PRIVATE
     <tgbot/types/Message.h>
     <sqlpp11/sqlpp11.h>
     <uuid.h>
+    <httplib.h>
     [["db/db.hpp"]]
     [["db/tables.hpp"]]
     [["utils.hpp"]]
@@ -68,5 +71,7 @@ target_link_libraries(main PRIVATE
     ${PostgreSQL_LIBRARIES}
     ${stduuid_LIBRARIES}
     ${tgbotstater_LIBRARIES}
+    ${rapidfuzz_LIBRARIES}
+    ${httplib_LIBRARIES}
 )
 

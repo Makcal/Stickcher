@@ -1,16 +1,18 @@
 #pragma once
 
+#include <httplib.h>
+
 #include <string>
-#include <string_view>
 
 class TextParser {
   private:
-    std::string apiUrl;
+    mutable httplib::Client http;
 
   public:
-    explicit TextParser(std::string_view apiUrl) : apiUrl(apiUrl) {}
+    explicit TextParser(const std::string& apiUrl) : http{apiUrl} {}
 
-    std::string parse(std::string_view image) const {
-        return "stub";
+    std::string parse(const std::string& image) const {
+        auto scanned = http.Post("/scan", image, "text/plain");
+        return scanned->body;
     }
 };
