@@ -26,6 +26,17 @@ services:
       timeout: 5s
       retries: 5
 
+  db-backup:
+    build:
+      dockerfile: Dockerfile.backup
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      PGPASSWORD: ${DB_PASSWORD}
+    volumes:
+     - ./backups:/backups
+    restart: unless-stopped
+
   scanner:
     image: nginx:latest
     volumes:
