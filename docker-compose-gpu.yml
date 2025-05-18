@@ -21,7 +21,7 @@ services:
       - db:/var/lib/postgresql/data
       - ./src/bot/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: pg_isready -U ${DB_USER} -d ${DB_NAME}
       interval: 5s
       timeout: 5s
       retries: 5
@@ -71,6 +71,9 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    depends_on:
+      scanner1:
+        condition: service_healthy
 
 volumes:
   db:
