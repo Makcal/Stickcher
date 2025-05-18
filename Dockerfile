@@ -22,7 +22,7 @@ RUN wget https://github.com/Makcal/TgBotStater/archive/refs/tags/v0.3.3.tar.gz \
 
 WORKDIR /app
 
-COPY CMakeLists.txt conanfile.txt .
+COPY conanfile.txt .
 RUN conan install . -of build --build=missing
 
 COPY . .
