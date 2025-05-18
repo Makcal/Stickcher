@@ -33,8 +33,10 @@ jobs:
       # Run Conan commands (will use cached packages if available)
     - name: Build and install dependencies
       run: |
-        conan profile detect
-        sed -i 's/compiler.cppstd=.*/compiler.cppstd=23/' ~/.conan2/profiles/default
+        if [ ! -e ~/.conan2/profiles/default ]; then
+          conan profile detect
+          sed -i 's/compiler.cppstd=.*/compiler.cppstd=23/' ~/.conan2/profiles/default
+        fi
         git clone --branch v0.3.2 --single-branch https://github.com/Makcal/TgBotStater.git
         cd TgBotStater
         conan create . --build=missing
