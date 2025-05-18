@@ -4,6 +4,6 @@ set -e
 git checkout sna_project
 git pull
 set +e
-docker-compose -f $COMPOSE down
+sudo docker compose -f $COMPOSE down
 set -e
-docker-compose -f $COMPOSE up --build -d
+sudo docker compose -f $COMPOSE up --build -d
