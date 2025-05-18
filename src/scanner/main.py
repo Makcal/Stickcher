@@ -20,3 +20,8 @@ def scan(body: bytes = Depends(get_body)) -> str:
         texts: list[str] = ocr_reader.readtext(body, detail=0, paragraph=True) # type: ignore
         result = ' '.join(texts)
         return result
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
