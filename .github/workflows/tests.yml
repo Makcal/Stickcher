@@ -1,0 +1,57 @@
+name: "Tests"
+
+on:
+  # Allow manual trigger of the workflow
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to deploy to
+        type: environment
+        required: true
+  # Verify build on any push (but only deploy on main)
+  push:
+  # Verify build in pull requests
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    # Setup Python (required for Conan)
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    # Cache Conan dependencies (stores packages in ~/.conan2)
+    - name: Cache Conan packages
+      id: cache-conan
+      uses: actions/cache@v3
+      with:
+        path: ~/.conan2
+        key: ${{ runner.os }}-conan-${{ hashFiles('conanfile.py', 'conanfile.txt') }}
+
+    # Install Conan (if not cached)
+    - name: Install Conan
+      run: pip install conan
+
+      # Run Conan commands (will use cached packages if available)
+    - name: Build and install dependencies
+      run: |
+        if [ ! -e ~/.conan2/profiles/default ]; then
+          conan profile detect
+          sed -i 's/compiler.cppstd=.*/compiler.cppstd=23/' ~/.conan2/profiles/default
+        fi
+        git clone --branch v0.3.3 --single-branch https://github.com/Makcal/TgBotStater.git
+        cd TgBotStater
+        conan create . --build=missing
+        cd ..
+        conan install . -of build --build=missing
+
+    - name: Generate compile_commands.json
+      run: cmake -B build --fresh --preset=conan-release && cmake --build build
+
+    - name: Run tests
+      run: cd build && make test
