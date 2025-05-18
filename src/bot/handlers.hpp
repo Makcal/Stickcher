@@ -230,7 +230,7 @@ processTagMessage(TagAddition& state, MessageRef m, BotRef bot, SMRef stateManag
         return;
     }
     StickerRepository::create(state);
-    bot.sendMessage(chatId, "Sticker added");
+    bot.sendMessage(chatId, "The previous sticker added");
     detail::processSticker(state.packId, m, bot, stateManager, parser);
 };
 using tagAdditionHandler = Handler<Events::Message{}, processTagMessage>;
