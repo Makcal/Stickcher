@@ -30,10 +30,6 @@ Searching Telegram stickers is now easier than ever! Index stickers by tags and 
   - Comprehensive logging
   - Automated backups
 
-## System Architecture
-
-![System Architecture](docs/architecture.png) <!-- Add your architecture diagram -->
-
 ## Prerequisites
 
 - Docker 27.5+
