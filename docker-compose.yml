@@ -34,7 +34,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       PGPASSWORD: ${DB_PASSWORD}
     volumes:
-     - ./backups:/backups
+     - backups:/backups
     restart: unless-stopped
 
   scanner:
@@ -72,4 +72,5 @@ services:
 volumes:
   db:
   easyocr-model:
+  backups:
 
