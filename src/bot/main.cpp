@@ -31,6 +31,5 @@ int main() {
                                                                 inlineSearchHandler>
         bot{{}, {TextParser{utils::getenvWithError("TEXT_PARSER_URL")}, settings}};
 
-    cout << "aboba";
     bot.start(TgBot::Bot{utils::getenvWithError("BOT_TOKEN")});
 }

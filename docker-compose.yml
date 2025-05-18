@@ -8,6 +8,8 @@ services:
       DB_USER:
       DB_PASSWORD:
       TEXT_PARSER_URL:
+      SIMILARITY_THRESHOLD:
+      ASSOCIATION_LIMIT:
     depends_on:
       db:
         condition: service_healthy
