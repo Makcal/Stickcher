@@ -37,7 +37,7 @@ jobs:
           conan profile detect
           sed -i 's/compiler.cppstd=.*/compiler.cppstd=23/' ~/.conan2/profiles/default
         fi
-        git clone --branch v0.3.2 --single-branch https://github.com/Makcal/TgBotStater.git
+        git clone --branch v0.3.3 --single-branch https://github.com/Makcal/TgBotStater.git
         cd TgBotStater
         conan create . --build=missing
         cd ..
