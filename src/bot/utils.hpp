@@ -1,13 +1,14 @@
 #pragma once
 
-#include <format>
 #include <rapidfuzz/fuzz.hpp>
+#include <uuid.h>
 
 #include <charconv>
 #include <cstdlib>
 #include <cstring>
+#include <format>
 #include <functional>
-#include <optional>
+#include <memory>
 #include <random>
 #include <ranges>
 #include <stdexcept>
