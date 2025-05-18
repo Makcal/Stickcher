@@ -1,15 +1,10 @@
 services:
   tg-bot:
     build: .
+    env_file: ".env"
     environment:
       DB_HOST: db
-      BOT_TOKEN:
-      DB_NAME:
-      DB_USER:
-      DB_PASSWORD:
-      TEXT_PARSER_URL:
-      SIMILARITY_THRESHOLD:
-      ASSOCIATION_LIMIT:
+      TEXT_PARSER_URL: http://scanner:8000
     depends_on:
       db:
         condition: service_healthy
@@ -28,6 +23,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  scanner:
+    build: ./src/scanner/.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
 
 volumes:
   db:

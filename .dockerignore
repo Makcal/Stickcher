@@ -1,3 +1,5 @@
+src/scanner/
+
 # General development files
 .dockerignore
 .git
