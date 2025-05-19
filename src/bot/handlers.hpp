@@ -7,7 +7,6 @@
 #include "states.hpp"
 #include "text_parser.hpp"
 #include "types.hpp"
-#include "utils.hpp"
 
 #include <tg_stater/handler/event.hpp>
 #include <tg_stater/handler/handler.hpp>
@@ -18,6 +17,7 @@
 #include <tgbot/types/Sticker.h>
 #include <uuid.h>
 
+#include <memory>
 #include <ranges>
 #include <string>
 #include <utility>
@@ -260,7 +260,7 @@ inline void searchStickers(const InlineQuery& iq, BotRef bot, const BotSettings&
         if (idSet.contains(id))
             continue;
         idSet.insert(id);
-        auto p = utils::make_shared(InlineQueryResultCachedSticker{});
+        auto p = std::make_shared<InlineQueryResultCachedSticker>();
         p->id = std::to_string(i);
         p->stickerFileId = std::move(id);
         results.emplace_back(p);
