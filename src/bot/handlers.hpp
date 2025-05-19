@@ -51,7 +51,7 @@ inline bool filterPublicMessage(MessageRef m, BotRef bot) {
 }
 
 inline void
-processSticker(const StickerPackId& packId, MessageRef m, BotRef bot, SMRef stateManager, const TextParser& parser) {
+addSticker(const StickerPackId& packId, MessageRef m, BotRef bot, SMRef stateManager, const TextParser& parser) {
     auto chatId = m.chat->id;
     const auto& sticker = *m.sticker;
     bool isRegular = sticker.type == TgBot::Sticker::Type::Regular && !sticker.isAnimated && !sticker.isVideo;
@@ -147,6 +147,8 @@ inline void packViewButtonCallback(PackView& state, CallbackQueryRef cq, BotRef 
         return;
     }
     if (cq.data == "delete_sticker") {
+        stateManager.put(StickerDeletion{state.packId});
+        renderStickerPrompt(chatId, bot);
         return;
     }
 };
@@ -182,7 +184,7 @@ inline void addSticker(StickerAddition& state, MessageRef m, BotRef bot, SMRef s
         renderStickerPrompt(chatId, bot);
         return;
     }
-    detail::processSticker(state.packId, m, bot, stateManager, parser);
+    detail::addSticker(state.packId, m, bot, stateManager, parser);
 };
 using stickerAdditionHandler = Handler<Events::Message{}, addSticker>;
 
@@ -231,7 +233,7 @@ processTagMessage(TagAddition& state, MessageRef m, BotRef bot, SMRef stateManag
     }
     StickerRepository::create(state);
     bot.sendMessage(chatId, "The previous sticker added");
-    detail::processSticker(state.packId, m, bot, stateManager, parser);
+    detail::addSticker(state.packId, m, bot, stateManager, parser);
 };
 using tagAdditionHandler = Handler<Events::Message{}, processTagMessage>;
 
@@ -253,6 +255,30 @@ inline void searchStickers(const InlineQuery& iq, BotRef bot, const BotSettings&
     bot.answerInlineQuery(iq.id, results);
 };
 using inlineSearchHandler = Handler<Events::InlineQuery{}, searchStickers, AnyState{}>;
+
+inline void cancelStickerDeletion(StickerDeletion& state, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
+    bot.answerCallbackQuery(cq.id);
+    if (cq.data == "cancel") {
+        renderPackView(state.packId, cq.message->chat->id, bot);
+        stateManager.put(PackView{state.packId});
+    }
+};
+using stickerDeletionButtonHandler = Handler<Events::CallbackQuery{}, cancelStickerDeletion>;
+
+inline void deleteSticker(StickerDeletion& state, MessageRef m, BotRef bot) {
+    auto chatId = m.chat->id;
+    if (!m.sticker) {
+        renderStickerPrompt(chatId, bot);
+        return;
+    }
+    if (StickerRepository::deleteFromPack(state.packId, m.sticker->fileUniqueId)) {
+        bot.sendMessage(m.chat->id, "Sticker was removed from the pack");
+    } else {
+        bot.sendMessage(m.chat->id, "Sticker isn't in the pack");
+    }
+    renderStickerPrompt(chatId, bot);
+};
+using stickerDeletionHandler = Handler<Events::Message{}, deleteSticker>;
 
 // NOLINTEND(*-named-parameter)
 // NOLINTEND(*-decay)

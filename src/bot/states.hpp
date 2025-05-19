@@ -32,7 +32,7 @@ struct PackView : detail::PackIdMixin {};
 
 struct PackDeletion : detail::PackIdMixin {};
 
-struct StickerDeletion {};
+struct StickerDeletion : detail::PackIdMixin {};
 
 struct StickerAddition : detail::PackIdMixin {};
 

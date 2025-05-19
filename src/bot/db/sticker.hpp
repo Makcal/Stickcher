@@ -63,6 +63,12 @@ class StickerRepository {
                views::transform([](auto& r) -> decltype(auto) { return std::move(r.first->first); }) |
                to<std::vector>();
     }
+
+    static bool deleteFromPack(const StickerPackId& packId, std::string_view fileUniqueId) {
+        using namespace sqlpp;
+        tables::Tag t;
+        return getDb()(remove_from(t).where(t.stickerId == fileUniqueId && t.packId == uuids::to_string(packId))) != 0;
+    }
 };
 
 } // namespace db

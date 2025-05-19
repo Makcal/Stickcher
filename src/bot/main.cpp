@@ -28,6 +28,8 @@ int main() {
                                                                 stickerAdditionHandler,
                                                                 tagAdditionButtonHandler,
                                                                 tagAdditionHandler,
+                                                                stickerDeletionButtonHandler,
+                                                                stickerDeletionHandler,
                                                                 inlineSearchHandler>
         bot{{}, {TextParser{utils::getenvWithError("TEXT_PARSER_URL")}, settings}};
 
