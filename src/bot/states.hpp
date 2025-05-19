@@ -2,11 +2,11 @@
 
 #include "types.hpp"
 
-#include <string>
-#include <string_view>
 #include <tg_stater/state_storage/common.hpp>
 #include <tg_stater/state_storage/memory.hpp>
 
+#include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -49,6 +49,12 @@ struct TagAddition : detail::PackIdMixin {
         : PackIdMixin{packId}, stickerFileId{fileId}, stickerFileUniqueId{fileUniqueId}, hasParsedTag{true} {
         tags.emplace_back(firstTag);
     }
+
+    TagAddition(StickerPackId packId,
+                std::string_view fileId,
+                std::string_view fileUniqueId,
+                std::vector<std::string> tags)
+        : PackIdMixin{packId}, stickerFileId{fileId}, stickerFileUniqueId{fileUniqueId}, tags{std::move(tags)} {}
 };
 
 using State =

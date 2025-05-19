@@ -69,6 +69,18 @@ class StickerRepository {
         tables::Tag t;
         return getDb()(remove_from(t).where(t.stickerId == fileUniqueId && t.packId == uuids::to_string(packId))) != 0;
     }
+
+    static std::vector<std::string> getTags(const StickerPackId& packId, std::string_view fileUniqueId) {
+        using namespace sqlpp;
+        tables::Tag t;
+        auto db = getDb();
+        auto tags = db(select(t.text).from(t).where(t.stickerId == fileUniqueId && t.packId == uuids::to_string(packId)));
+        std::vector<std::string> result;
+        result.reserve(tags.size());
+        for (const auto& row : tags)
+            result.emplace_back(row.text);
+        return result;
+    }
 };
 
 } // namespace db

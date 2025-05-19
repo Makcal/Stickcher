@@ -50,10 +50,19 @@ inline bool filterPublicMessage(MessageRef m, BotRef bot) {
     return false;
 }
 
-inline void
-addSticker(const StickerPackId& packId, MessageRef m, BotRef bot, SMRef stateManager, const TextParser& parser) {
-    auto chatId = m.chat->id;
-    const auto& sticker = *m.sticker;
+inline void addSticker(const StickerPackId& packId,
+                       ChatId chatId,
+                       const TgBot::Sticker& sticker,
+                       BotRef bot,
+                       SMRef stateManager,
+                       const TextParser& parser) {
+    auto tags = StickerRepository::getTags(packId, sticker.fileUniqueId);
+    if (!tags.empty()) { // re-add
+        stateManager.put(TagAddition{packId, sticker.fileId, sticker.fileUniqueId, std::move(tags)});
+        renderTagPrompt(std::get<TagAddition>(*stateManager.get()), chatId, bot);
+        return;
+    }
+
     bool isRegular = sticker.type == TgBot::Sticker::Type::Regular && !sticker.isAnimated && !sticker.isVideo;
     if (!isRegular && !sticker.thumbnail) {
         bot.sendMessage(chatId, "Error processing this sticker");
@@ -184,7 +193,7 @@ inline void addSticker(StickerAddition& state, MessageRef m, BotRef bot, SMRef s
         renderStickerPrompt(chatId, bot);
         return;
     }
-    detail::addSticker(state.packId, m, bot, stateManager, parser);
+    detail::addSticker(state.packId, chatId, *m.sticker, bot, stateManager, parser);
 };
 using stickerAdditionHandler = Handler<Events::Message{}, addSticker>;
 
@@ -227,13 +236,13 @@ processTagMessage(TagAddition& state, MessageRef m, BotRef bot, SMRef stateManag
         return;
     }
     if (state.tags.empty()) {
-        bot.sendMessage(chatId, "You can't add a sticker without a tag");
+        bot.sendMessage(chatId, "You can't add a sticker without a tag. Back to the previous sticker");
         renderTagPrompt(state, chatId, bot);
         return;
     }
     StickerRepository::create(state);
     bot.sendMessage(chatId, "The previous sticker added");
-    detail::addSticker(state.packId, m, bot, stateManager, parser);
+    detail::addSticker(state.packId, chatId, *m.sticker, bot, stateManager, parser);
 };
 using tagAdditionHandler = Handler<Events::Message{}, processTagMessage>;
 

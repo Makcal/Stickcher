@@ -72,7 +72,12 @@ inline void renderPackView(StickerPackId packId, ChatId chatId, BotRef bot) {
     keyboard[1].push_back(detail::makeCallbackButton("Delete sticker", "delete_sticker"));
 
     bot.sendMessage(
-        chatId, std::format("Pack {}", packName), nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
+        chatId,
+        std::format("Pack \"{}\"\nYou can add new stickers or new tags for exising stickers via \"Add sticker\"",
+                    packName),
+        nullptr,
+        nullptr,
+        detail::makeKeyboardMarkup(std::move(keyboard)));
 }
 
 inline void renderPackDeleteConfirmation(ChatId chatId, BotRef bot) {
