@@ -23,3 +23,12 @@ CREATE TABLE IF NOT EXISTS tag (
 );
 CREATE INDEX IF NOT EXISTS tag_pack_id_text_sticker_id_idx ON tag
     USING btree (pack_id) INCLUDE (text, sticker_id);
+
+CREATE TABLE IF NOT EXISTS pack_sharing (
+    user_id BIGINT NOT NULL,
+    pack_id UUID NOT NULL,
+    is_editor BOOLEAN NOT NULL DEFAULT false,
+    PRIMARY KEY (user_id, pack_id),
+    FOREIGN KEY(pack_id) REFERENCES sticker_pack(id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+);
