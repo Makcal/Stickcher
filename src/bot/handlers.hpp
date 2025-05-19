@@ -255,7 +255,11 @@ inline void searchStickers(const InlineQuery& iq, BotRef bot, const BotSettings&
         StickerRepository::findAllByTag(iq.from->id, iq.query, settings.similarityThreshold, settings.associationLimit);
     std::vector<InlineQueryResult::Ptr> results;
     results.reserve(fileIds.size());
+    std::unordered_set<StickerFileId> idSet;
     for (auto [i, id] : std::views::enumerate(fileIds)) {
+        if (idSet.contains(id))
+            continue;
+        idSet.insert(id);
         auto p = utils::make_shared(InlineQueryResultCachedSticker{});
         p->id = std::to_string(i);
         p->stickerFileId = std::move(id);
