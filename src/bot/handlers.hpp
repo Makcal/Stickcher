@@ -149,12 +149,23 @@ inline void importPack(PackImportEnterName&, MessageRef m, BotRef bot, SMRef sta
         renderPackIdPrompt(chatId, bot);
         return;
     }
-    if (!StickerPackRepository::import(*maybePackId, m.from->id)) {
+    auto importResult = StickerPackRepository::import(*maybePackId, m.from->id);
+    using ImportResult = StickerPackRepository::ImportResult;
+
+    switch (importResult) {
+    case ImportResult::Success:
+        bot.sendMessage(chatId, "The pack was imported successfully");
+        break;
+    case ImportResult::NotExist:
         bot.sendMessage(chatId, "This pack does not exists");
-        renderPackIdPrompt(chatId, bot);
-        return;
+        break;
+    case ImportResult::ImportByOwner:
+        bot.sendMessage(chatId, "You cannot import your own pack");
+        break;
+    case ImportResult::AlreadyImported:
+        bot.sendMessage(chatId, "You've already imported this");
+        break;
     }
-    bot.sendMessage(chatId, "The pack was imported successfully");
     stateManager.put(PackList{});
     renderPackList(m.from->id, chatId, bot);
 };
