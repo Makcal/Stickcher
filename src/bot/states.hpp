@@ -28,6 +28,8 @@ struct PackList {};
 
 struct PackCreateEnterName {};
 
+struct PackImportEnterName {};
+
 struct PackView : detail::PackIdMixin {};
 
 struct PackDeletion : detail::PackIdMixin {};
@@ -57,8 +59,14 @@ struct TagAddition : detail::PackIdMixin {
         : PackIdMixin{packId}, stickerFileId{fileId}, stickerFileUniqueId{fileUniqueId}, tags{std::move(tags)} {}
 };
 
-using State =
-    std::variant<PackList, PackCreateEnterName, PackView, PackDeletion, StickerDeletion, StickerAddition, TagAddition>;
+using State = std::variant<PackList,
+                           PackCreateEnterName,
+                           PackImportEnterName,
+                           PackView,
+                           PackDeletion,
+                           StickerDeletion,
+                           StickerAddition,
+                           TagAddition>;
 
 using StateManager = tg_stater::StateProxy<tg_stater::MemoryStateStorage<State>>;
 

@@ -114,6 +114,11 @@ inline void packListButtonCallback(PackList&, CallbackQueryRef cq, BotRef bot, S
         renderPackNamePrompt(cq.message->chat->id, bot);
         return;
     }
+    if (cq.data == "import") {
+        stateManager.put(PackImportEnterName{});
+        renderPackIdPrompt(cq.message->chat->id, bot);
+        return;
+    }
     auto packId = *uuids::uuid::from_string(cq.data);
     stateManager.put(PackView{packId});
     renderPackView(packId, cq.message->chat->id, bot);
@@ -135,6 +140,34 @@ inline void cancelPackCreation(PackCreateEnterName&, CallbackQueryRef cq, BotRef
     }
 };
 using packCreateButtonHandler = Handler<Events::CallbackQuery{}, cancelPackCreation>;
+
+inline void importPack(PackImportEnterName&, MessageRef m, BotRef bot, SMRef stateManager) {
+    auto maybePackId = uuids::uuid::from_string(m.text);
+    auto chatId = m.chat->id;
+    if (!maybePackId) {
+        bot.sendMessage(chatId, "Invalid UUID format");
+        renderPackIdPrompt(chatId, bot);
+        return;
+    }
+    if (!StickerPackRepository::import(*maybePackId, m.from->id)) {
+        bot.sendMessage(chatId, "This pack does not exists");
+        renderPackIdPrompt(chatId, bot);
+        return;
+    }
+    bot.sendMessage(chatId, "The pack was imported successfully");
+    stateManager.put(PackList{});
+    renderPackList(m.from->id, chatId, bot);
+};
+using packImportHandler = Handler<Events::Message{}, importPack>;
+
+inline void cancelPackImport(PackImportEnterName&, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
+    bot.answerCallbackQuery(cq.id);
+    if (cq.data == "cancel") {
+        stateManager.put(PackList{});
+        renderPackList(cq.from->id, cq.message->chat->id, bot);
+    }
+};
+using packImportButtonHandler = Handler<Events::CallbackQuery{}, cancelPackImport>;
 
 inline void packViewButtonCallback(PackView& state, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
     bot.answerCallbackQuery(cq.id);

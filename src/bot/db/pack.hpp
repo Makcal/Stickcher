@@ -6,10 +6,15 @@
 #include "types.hpp"
 #include "utils.hpp"
 
+#include <sqlpp11/aggregate_functions/count.h>
 #include <sqlpp11/all_of.h>
 #include <sqlpp11/insert.h>
+#include <sqlpp11/postgresql/exception.h>
+#include <sqlpp11/postgresql/insert.h>
 #include <sqlpp11/remove.h>
 #include <sqlpp11/select.h>
+#include <sqlpp11/select_flags.h>
+#include <sqlpp11/value.h>
 #include <uuid.h>
 
 #include <format>
@@ -75,6 +80,19 @@ class StickerPackRepository {
         tables::StickerPack sp;
         if (getDb()(remove_from(sp).where(sp.id == uuids::to_string(packId))) == 0)
             throw std::runtime_error(std::format("StickerPack {} not found", uuids::to_string(packId)));
+    }
+
+    static bool import(const StickerPackId& packId, UserId userId) {
+        using namespace sqlpp;
+        auto db = getDb();
+        auto packIdStr = uuids::to_string(packId);
+        tables::PackSharing ps;
+        try {
+            db(postgresql::insert_into(ps).set(ps.userId = userId, ps.packId = packIdStr).on_conflict().do_nothing());
+        } catch (postgresql::foreign_key_violation&) {
+            return false;
+        }
+        return true;
     }
 };
 

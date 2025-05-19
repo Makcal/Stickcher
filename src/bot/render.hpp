@@ -44,7 +44,9 @@ inline void renderPackList(UserId userId, ChatId chatId, BotRef bot) {
     auto packs = StickerPackRepository::getUserPacks(userId);
 
     InlineKeyboard keyboard(1 + ((packs.size() + 1) / 2)); // ceiling
+    keyboard[0].reserve(2);
     keyboard[0].push_back(detail::makeCallbackButton("Add new", "create"));
+    keyboard[0].push_back(detail::makeCallbackButton("Import", "import"));
     for (auto [i, p] : std::views::enumerate(packs)) {
         if (i % 2 == 0)
             keyboard[1 + (i / 2)].reserve(2);
@@ -57,7 +59,13 @@ inline void renderPackList(UserId userId, ChatId chatId, BotRef bot) {
 inline void renderPackNamePrompt(ChatId chatId, BotRef bot) {
     InlineKeyboard keyboard(1);
     keyboard[0].push_back(detail::makeCallbackButton("Cancel", "cancel"));
-    bot.sendMessage(chatId, "Enter name:", nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
+    bot.sendMessage(chatId, "Enter a name", nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
+}
+
+inline void renderPackIdPrompt(ChatId chatId, BotRef bot) {
+    InlineKeyboard keyboard(1);
+    keyboard[0].push_back(detail::makeCallbackButton("Cancel", "cancel"));
+    bot.sendMessage(chatId, "Enter a pack's id", nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
 }
 
 inline void renderPackView(StickerPackId packId, ChatId chatId, BotRef bot) {

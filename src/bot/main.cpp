@@ -22,6 +22,8 @@ int main() {
                                                                 packListButtonHandler,
                                                                 packCreateHandler,
                                                                 packCreateButtonHandler,
+                                                                packImportHandler,
+                                                                packImportButtonHandler,
                                                                 packViewButtonHandler,
                                                                 packDeletionButtonHandler,
                                                                 stickerAdditionButtonHandler,
