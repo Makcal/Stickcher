@@ -1,6 +1,7 @@
 #pragma once
 
 #include "db/pack.hpp"
+#include "db/pack_sharing.hpp"
 #include "db/sticker.hpp"
 #include "render.hpp"
 #include "settings.hpp"
@@ -109,19 +110,20 @@ using startHandler = Handler<Events::Command{startCmd}, start, AnyState{}>;
 
 inline void packListButtonCallback(PackList&, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
     bot.answerCallbackQuery(cq.id);
+    auto chatId = cq.message->chat->id;
     if (cq.data == "create") {
         stateManager.put(PackCreateEnterName{});
-        renderPackNamePrompt(cq.message->chat->id, bot);
+        renderPackNamePrompt(chatId, bot);
         return;
     }
     if (cq.data == "import") {
         stateManager.put(PackImportEnterName{});
-        renderPackIdPrompt(cq.message->chat->id, bot);
+        renderPackIdPrompt(chatId, bot);
         return;
     }
     auto packId = *uuids::uuid::from_string(cq.data);
     stateManager.put(PackView{packId});
-    renderPackView(packId, cq.message->chat->id, bot);
+    renderPackView(packId, cq.from->id, chatId, bot);
 };
 using packListButtonHandler = Handler<Events::CallbackQuery{}, packListButtonCallback>;
 
@@ -149,8 +151,8 @@ inline void importPack(PackImportEnterName&, MessageRef m, BotRef bot, SMRef sta
         renderPackIdPrompt(chatId, bot);
         return;
     }
-    auto importResult = StickerPackRepository::import(*maybePackId, m.from->id);
-    using ImportResult = StickerPackRepository::ImportResult;
+    auto importResult = PackSharingRepository::import(*maybePackId, m.from->id);
+    using ImportResult = PackSharingRepository::ImportResult;
 
     switch (importResult) {
     case ImportResult::Success:
@@ -194,6 +196,12 @@ inline void packViewButtonCallback(PackView& state, CallbackQueryRef cq, BotRef 
         renderPackDeleteConfirmation(chatId, bot);
         return;
     }
+    if (cq.data == "remove") {
+        PackSharingRepository::remove(userId, state.packId);
+        stateManager.put(PackList{});
+        renderPackList(userId, chatId, bot);
+        return;
+    }
     if (cq.data == "add_sticker") {
         stateManager.put(StickerAddition{state.packId});
         renderStickerPrompt(chatId, bot);
@@ -210,7 +218,7 @@ using packViewButtonHandler = Handler<Events::CallbackQuery{}, packViewButtonCal
 inline void packDeletionButtonCallback(PackDeletion& state, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
     bot.answerCallbackQuery(cq.id);
     if (cq.data == "cancel") {
-        renderPackView(state.packId, cq.message->chat->id, bot);
+        renderPackView(state.packId, cq.from->id, cq.message->chat->id, bot);
         stateManager.put(PackView{state.packId});
         return;
     }
@@ -225,7 +233,7 @@ using packDeletionButtonHandler = Handler<Events::CallbackQuery{}, packDeletionB
 inline void cancelStickerAddition(StickerAddition& state, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
     bot.answerCallbackQuery(cq.id);
     if (cq.data == "cancel") {
-        renderPackView(state.packId, cq.message->chat->id, bot);
+        renderPackView(state.packId, cq.from->id, cq.message->chat->id, bot);
         stateManager.put(PackView{state.packId});
     }
 };
@@ -245,7 +253,7 @@ inline void tagAdditionButtonCallback(TagAddition& state, CallbackQueryRef cq, B
     bot.answerCallbackQuery(cq.id);
     auto chatId = cq.message->chat->id;
     if (cq.data == "cancel") {
-        renderPackView(state.packId, chatId, bot);
+        renderPackView(state.packId, cq.from->id, chatId, bot);
         stateManager.put(PackView{state.packId});
         return;
     }
@@ -256,7 +264,7 @@ inline void tagAdditionButtonCallback(TagAddition& state, CallbackQueryRef cq, B
         } else {
             StickerRepository::create(state);
             bot.sendMessage(chatId, "Sticker added");
-            renderPackView(state.packId, chatId, bot);
+            renderPackView(state.packId, cq.from->id, chatId, bot);
             stateManager.put(PackView{state.packId});
         }
         return;
@@ -316,7 +324,7 @@ using inlineSearchHandler = Handler<Events::InlineQuery{}, searchStickers, AnySt
 inline void cancelStickerDeletion(StickerDeletion& state, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
     bot.answerCallbackQuery(cq.id);
     if (cq.data == "cancel") {
-        renderPackView(state.packId, cq.message->chat->id, bot);
+        renderPackView(state.packId, cq.from->id, cq.message->chat->id, bot);
         stateManager.put(PackView{state.packId});
     }
 };

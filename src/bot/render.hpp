@@ -1,6 +1,7 @@
 #pragma once
 
 #include "db/pack.hpp"
+#include "db/pack_sharing.hpp"
 #include "states.hpp"
 #include "types.hpp"
 #include "utils.hpp"
@@ -68,23 +69,34 @@ inline void renderPackIdPrompt(ChatId chatId, BotRef bot) {
     bot.sendMessage(chatId, "Enter a pack's id", nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
 }
 
-inline void renderPackView(StickerPackId packId, ChatId chatId, BotRef bot) {
-    auto packName = StickerPackRepository::getName(packId);
+inline void renderPackView(StickerPackId packId, UserId userId, ChatId chatId, BotRef bot) {
+    auto pack = StickerPackRepository::get(packId);
+    bool isOwner = pack.ownerId == userId;
+    bool isEditor = false;
+    if (!isOwner)
+        isEditor = PackSharingRepository::checkEditorRights(packId, userId);
 
-    InlineKeyboard keyboard(2);
+    InlineKeyboard keyboard(isOwner || isEditor ? 2 : 1);
     keyboard[0].reserve(2);
-    keyboard[1].reserve(2);
     keyboard[0].push_back(detail::makeCallbackButton("Back", "back"));
-    keyboard[0].push_back(detail::makeCallbackButton("Delete", "delete"));
-    keyboard[1].push_back(detail::makeCallbackButton("Add sticker", "add_sticker"));
-    keyboard[1].push_back(detail::makeCallbackButton("Delete sticker", "delete_sticker"));
+    if (isOwner)
+        keyboard[0].push_back(detail::makeCallbackButton("Delete", "delete"));
+    else
+        keyboard[0].push_back(detail::makeCallbackButton("Remove", "remove"));
+    if (isOwner || isEditor) {
+        keyboard[1].reserve(2);
+        keyboard[1].push_back(detail::makeCallbackButton("Add sticker", "add_sticker"));
+        keyboard[1].push_back(detail::makeCallbackButton("Delete sticker", "delete_sticker"));
+    }
 
     bot.sendMessage(chatId,
                     std::format("Pack \"{}\"\n"
-                                "Id: `{}`\n"
-                                "You can add new stickers or new tags for exising stickers via \"Add sticker\"",
-                                packName,
-                                uuids::to_string(packId)),
+                                "Id: `{}`{}",
+                                pack.name,
+                                uuids::to_string(packId),
+                                isOwner || isEditor
+                                    ? "\nYou can add new stickers or new tags for exising stickers via \"Add sticker\""
+                                    : ""),
                     nullptr,
                     nullptr,
                     detail::makeKeyboardMarkup(std::move(keyboard)),
