@@ -79,6 +79,7 @@ inline void renderPackView(StickerPackId packId, UserId userId, ChatId chatId, B
         isEditor = PackSharingRepository::checkEditorRights(packId, userId);
     if (isEditor)
         buttonRows = 2;
+    std::cout << isEditor << '\n';
 
     InlineKeyboard keyboard(buttonRows);
     keyboard[0].reserve(2);

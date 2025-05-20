@@ -52,6 +52,7 @@ class PackSharingRepository {
     static bool checkEditorRights(const StickerPackId& packId, UserId userId) {
         using namespace sqlpp;
         tables::PackSharing ps;
+        std::cout << uuids::to_string(packId) << ' ' << userId << '\n';
         auto query = select(ps.isEditor).from(ps).where(ps.packId == uuids::to_string(packId) && ps.userId == userId);
         if (const auto& row = getDb()(query).front())
             return row.isEditor;
