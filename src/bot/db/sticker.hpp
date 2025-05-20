@@ -48,9 +48,14 @@ class StickerRepository {
         tables::Tag t;
         tables::Sticker s;
         tables::StickerPack sp;
-        auto rows = db(select(s.fileId, t.text)
-                           .from(t.join(s).on(t.stickerId == s.fileUniqueId).join(sp).on(t.packId == sp.id))
-                           .where(sp.ownerId == userId));
+        tables::PackSharing ps;
+        auto selectOwn = select(s.fileId, t.text)
+                             .from(t.join(s).on(t.stickerId == s.fileUniqueId).join(sp).on(t.packId == sp.id))
+                             .where(sp.ownerId == userId);
+        auto selectImported = select(s.fileId, t.text)
+                                  .from(t.join(s).on(t.stickerId == s.fileUniqueId).join(ps).on(t.packId == ps.packId))
+                                  .where(ps.userId == userId);
+        auto rows = db(selectOwn.union_all(selectImported));
 
         using Association = std::pair<StickerFileId, std::string>;
         std::vector<Association> associations;
@@ -74,7 +79,8 @@ class StickerRepository {
         using namespace sqlpp;
         tables::Tag t;
         auto db = getDb();
-        auto tags = db(select(t.text).from(t).where(t.stickerId == fileUniqueId && t.packId == uuids::to_string(packId)));
+        auto tags =
+            db(select(t.text).from(t).where(t.stickerId == fileUniqueId && t.packId == uuids::to_string(packId)));
         std::vector<std::string> result;
         result.reserve(tags.size());
         for (const auto& row : tags)
