@@ -3,12 +3,12 @@
 #include <rapidfuzz/fuzz.hpp>
 #include <uuid.h>
 
-#include <charconv>
 #include <cstdlib>
 #include <cstring>
 #include <format>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <random>
 #include <ranges>
 #include <stdexcept>
@@ -58,6 +58,14 @@ T parse(const char* s) {
     if (std::from_chars(s, s + std::strlen(s), value).ec == std::errc{})
         return value;
     throw std::runtime_error(std::format("Cannot parse {}", s));
+}
+
+template <typename T>
+std::optional<T> parseSafe(const char* s) {
+    T value;
+    if (std::from_chars(s, s + std::strlen(s), value).ec == std::errc{})
+        return value;
+    return std::nullopt;
 }
 
 } // namespace utils

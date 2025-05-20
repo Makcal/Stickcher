@@ -13,6 +13,7 @@
 #include <uuid.h>
 
 #include <format>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <ranges>
@@ -72,11 +73,14 @@ inline void renderPackIdPrompt(ChatId chatId, BotRef bot) {
 inline void renderPackView(StickerPackId packId, UserId userId, ChatId chatId, BotRef bot) {
     auto pack = StickerPackRepository::get(packId);
     bool isOwner = pack.ownerId == userId;
+    unsigned int buttonRows = isOwner ? 3 : 1;
     bool isEditor = false;
     if (!isOwner)
         isEditor = PackSharingRepository::checkEditorRights(packId, userId);
+    if (isEditor)
+        buttonRows = 2;
 
-    InlineKeyboard keyboard(isOwner || isEditor ? 2 : 1);
+    InlineKeyboard keyboard(buttonRows);
     keyboard[0].reserve(2);
     keyboard[0].push_back(detail::makeCallbackButton("Back", "back"));
     if (isOwner)
@@ -88,6 +92,8 @@ inline void renderPackView(StickerPackId packId, UserId userId, ChatId chatId, B
         keyboard[1].push_back(detail::makeCallbackButton("Add sticker", "add_sticker"));
         keyboard[1].push_back(detail::makeCallbackButton("Delete sticker", "delete_sticker"));
     }
+    if (isOwner)
+        keyboard[2].push_back(detail::makeCallbackButton("Editors", "editors"));
 
     bot.sendMessage(chatId,
                     std::format("Pack \"{}\"\n"
@@ -143,6 +149,21 @@ inline void renderTagPrompt(const states::TagAddition& state,
     } else {
         bot.sendMessage(chatId, text, nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
     }
+}
+
+inline void renderEditorList(const StickerPackId& packId, ChatId chatId, BotRef bot) {
+    InlineKeyboard keyboard(1);
+    keyboard[0].push_back(detail::makeCallbackButton("Back", "back"));
+    std::string list;
+    for (auto [i, id] : std::views::enumerate(PackSharingRepository::getEditors(packId)))
+        std::format_to(std::back_inserter(list), "{}. {}", i, id);
+    bot.sendMessage(chatId,
+                    std::format("Here is the list of people with editor privileges. "
+                                "Send a Telegram ID to add/remove from the list.\n{}",
+                                list),
+                    nullptr,
+                    nullptr,
+                    detail::makeKeyboardMarkup(std::move(keyboard)));
 }
 
 } // namespace render

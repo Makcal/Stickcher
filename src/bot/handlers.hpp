@@ -8,6 +8,7 @@
 #include "states.hpp"
 #include "text_parser.hpp"
 #include "types.hpp"
+#include "utils.hpp"
 
 #include <tg_stater/handler/event.hpp>
 #include <tg_stater/handler/handler.hpp>
@@ -212,6 +213,10 @@ inline void packViewButtonCallback(PackView& state, CallbackQueryRef cq, BotRef 
         renderStickerPrompt(chatId, bot);
         return;
     }
+    if (cq.data == "editors") {
+        renderEditorList(state.packId, chatId, bot);
+        return;
+    }
 };
 using packViewButtonHandler = Handler<Events::CallbackQuery{}, packViewButtonCallback>;
 
@@ -344,6 +349,23 @@ inline void deleteSticker(StickerDeletion& state, MessageRef m, BotRef bot) {
     renderStickerPrompt(chatId, bot);
 };
 using stickerDeletionHandler = Handler<Events::Message{}, deleteSticker>;
+
+inline void changeEditors(EditorList& state, MessageRef m, BotRef bot) {
+    auto mEditorId = utils::parseSafe<UserId>(m.text.data());
+    if (mEditorId)
+        PackSharingRepository::flipIsEditor(state.packId, *mEditorId);
+    renderEditorList(state.packId, m.chat->id, bot);
+}
+using editorListHandler = Handler<Events::Message{}, changeEditors>;
+
+inline void cancelEditorChange(EditorList& state, CallbackQueryRef cq, BotRef bot, SMRef stateManager) {
+    bot.answerCallbackQuery(cq.id);
+    if (cq.data == "back") {
+        renderPackView(state.packId, cq.from->id, cq.message->chat->id, bot);
+        stateManager.put(PackView{state.packId});
+    }
+};
+using editorListButtonHandler = Handler<Events::CallbackQuery{}, cancelEditorChange>;
 
 // NOLINTEND(*-named-parameter)
 // NOLINTEND(*-decay)

@@ -13,6 +13,7 @@
 
 #include <format>
 #include <stdexcept>
+#include <vector>
 
 namespace db {
 
@@ -63,6 +64,27 @@ class PackSharingRepository {
         auto packIdStr = uuids::to_string(packId);
         if (getDb()(remove_from(ps).where(ps.userId == userId && ps.packId == packIdStr)) == 0)
             throw std::runtime_error(std::format("User {} didn't import {}", userId, packIdStr));
+    }
+
+    static bool flipIsEditor(const StickerPackId& packId, UserId userId) {
+        using namespace sqlpp;
+        tables::PackSharing ps;
+        auto query = update(ps)
+                         .set(ps.isEditor = !ps.isEditor)
+                         .where(ps.userId == userId && ps.packId == uuids::to_string(packId));
+        return getDb()(query) != 0;
+    }
+
+    static std::vector<UserId> getEditors(const StickerPackId& packId) {
+        using namespace sqlpp;
+        auto db = getDb();
+        tables::PackSharing ps;
+        auto ids = db(select(ps.userId).from(ps).where(ps.packId == uuids::to_string(packId) && ps.isEditor == true));
+        std::vector<UserId> results;
+        results.reserve(ids.size());
+        for (const auto& row : ids)
+            results.push_back(row.userId);
+        return results;
     }
 };
 

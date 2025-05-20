@@ -32,6 +32,8 @@ int main() {
                                                                 tagAdditionHandler,
                                                                 stickerDeletionButtonHandler,
                                                                 stickerDeletionHandler,
+                                                                editorListHandler,
+                                                                editorListButtonHandler,
                                                                 inlineSearchHandler>
         bot{{}, {TextParser{utils::getenvWithError("TEXT_PARSER_URL")}, settings}};
 
