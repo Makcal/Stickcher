@@ -156,7 +156,7 @@ inline void renderEditorList(const StickerPackId& packId, ChatId chatId, BotRef 
     keyboard[0].push_back(detail::makeCallbackButton("Back", "back"));
     std::string list;
     for (auto [i, id] : std::views::enumerate(PackSharingRepository::getEditors(packId)))
-        std::format_to(std::back_inserter(list), "{}. {}", i, id);
+        std::format_to(std::back_inserter(list), "{}. {}", i + 1, id);
     bot.sendMessage(chatId,
                     std::format("Here is the list of people with editor privileges. "
                                 "Send a Telegram ID to add/remove from the list (raw feature).\n{}",

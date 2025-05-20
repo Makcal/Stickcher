@@ -353,10 +353,12 @@ using stickerDeletionHandler = Handler<Events::Message{}, deleteSticker>;
 
 inline void changeEditors(EditorList& state, MessageRef m, BotRef bot) {
     auto mEditorId = utils::parseSafe<UserId>(m.text.data());
-    if (mEditorId)
-        PackSharingRepository::flipIsEditor(state.packId, *mEditorId);
-    else
+    if (mEditorId) {
+        if (!PackSharingRepository::flipIsEditor(state.packId, *mEditorId))
+            bot.sendMessage(m.chat->id, "The user didn't imported this pack");
+    } else {
         bot.sendMessage(m.chat->id, "Wrong id");
+    }
     renderEditorList(state.packId, m.chat->id, bot);
 }
 using editorListHandler = Handler<Events::Message{}, changeEditors>;
