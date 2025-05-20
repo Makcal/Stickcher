@@ -215,6 +215,7 @@ inline void packViewButtonCallback(PackView& state, CallbackQueryRef cq, BotRef 
     }
     if (cq.data == "editors") {
         renderEditorList(state.packId, chatId, bot);
+        stateManager.put(EditorList{state.packId});
         return;
     }
 };
@@ -354,6 +355,8 @@ inline void changeEditors(EditorList& state, MessageRef m, BotRef bot) {
     auto mEditorId = utils::parseSafe<UserId>(m.text.data());
     if (mEditorId)
         PackSharingRepository::flipIsEditor(state.packId, *mEditorId);
+    else
+        bot.sendMessage(m.chat->id, "Wrong id");
     renderEditorList(state.packId, m.chat->id, bot);
 }
 using editorListHandler = Handler<Events::Message{}, changeEditors>;

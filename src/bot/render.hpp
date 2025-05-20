@@ -159,7 +159,7 @@ inline void renderEditorList(const StickerPackId& packId, ChatId chatId, BotRef 
         std::format_to(std::back_inserter(list), "{}. {}", i, id);
     bot.sendMessage(chatId,
                     std::format("Here is the list of people with editor privileges. "
-                                "Send a Telegram ID to add/remove from the list.\n{}",
+                                "Send a Telegram ID to add/remove from the list (raw feature).\n{}",
                                 list),
                     nullptr,
                     nullptr,
