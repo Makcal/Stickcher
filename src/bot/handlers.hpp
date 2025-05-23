@@ -275,6 +275,8 @@ inline void tagAdditionButtonCallback(TagAddition& state, CallbackQueryRef cq, B
         return;
     }
     if (cq.data == "delete_recognized") {
+        if (!state.hasParsedTag)
+            return;
         state.hasParsedTag = false;
         state.tags.erase(state.tags.begin());
         updateTagPrompt(state.tags, false, chatId, bot, cq.message->messageId);
