@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS tag (
         ON UPDATE CASCADE ON DELETE CASCADE,
     FOREIGN KEY (pack_id) REFERENCES sticker_pack(id)
         ON UPDATE CASCADE ON DELETE CASCADE
+    -- almost PRIMARY KEY(pack_id, sticker_id)
 );
 CREATE INDEX IF NOT EXISTS tag_pack_id_text_sticker_id_idx ON tag
     USING btree (pack_id) INCLUDE (text, sticker_id);

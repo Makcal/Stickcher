@@ -7,6 +7,7 @@
 #include "utils.hpp"
 
 #include <sqlpp11/postgresql/insert.h>
+#include <sqlpp11/remove.h>
 #include <sqlpp11/select.h>
 #include <uuid.h>
 
@@ -31,11 +32,11 @@ class StickerRepository {
                .do_update(s.fileId = state.stickerFileId));
 
         tables::Tag t;
+        auto packIdStr = uuids::to_string(state.packId);
+        db(remove_from(t).where(t.packId == packIdStr && t.stickerId == state.stickerFileUniqueId));
         auto tagInsert = insert_into(t).columns(t.packId, t.stickerId, t.text);
-        for (const auto& tag : state.tags) {
-            tagInsert.values.add(
-                t.packId = uuids::to_string(state.packId), t.stickerId = state.stickerFileUniqueId, t.text = tag);
-        }
+        for (const auto& tag : state.tags)
+            tagInsert.values.add(t.packId = packIdStr, t.stickerId = state.stickerFileUniqueId, t.text = tag);
         db(tagInsert);
     }
 
