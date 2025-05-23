@@ -40,6 +40,27 @@ inline std::shared_ptr<InlineKeyboardMarkup> makeKeyboardMarkup(InlineKeyboard&&
     return markup;
 }
 
+inline std::pair<InlineKeyboard, std::string> prepareTagListMessage(const std::vector<std::string>& tags,
+                                                                    bool showDeleteParsed) {
+    InlineKeyboard keyboard(1);
+    keyboard[0].reserve(2);
+    keyboard[0].push_back(detail::makeCallbackButton("Cancel", "cancel"));
+    if (tags.size() > 0)
+        keyboard[0].push_back(detail::makeCallbackButton("Done", "done"));
+    if (showDeleteParsed) {
+        keyboard.emplace(keyboard.begin());
+        keyboard[0].push_back(detail::makeCallbackButton("Delete recogized", "delete_recognized"));
+    }
+
+    using namespace std::views;
+    using std::ranges::to;
+    auto text = std::format("You can add tags to the sticker.\n"
+                            "When you finish, send me a next sticker or press \"Done\".\n"
+                            "Tags:\n{}",
+                            tags | join_with('\n') | to<std::string>());
+    return {std::move(keyboard), std::move(text)};
+}
+
 } // namespace detail
 
 inline void renderPackList(UserId userId, ChatId chatId, BotRef bot) {
@@ -125,31 +146,16 @@ inline void renderStickerPrompt(ChatId chatId, BotRef bot) {
     bot.sendMessage(chatId, "Send me a sticker", nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
 }
 
-inline void renderTagPrompt(const states::TagAddition& state,
-                            ChatId chatId,
-                            BotRef bot,
-                            std::optional<::MessageId> toEdit = std::nullopt) {
-    InlineKeyboard keyboard(1);
-    keyboard[0].reserve(2);
-    keyboard[0].push_back(detail::makeCallbackButton("Cancel", "cancel"));
-    if (state.tags.size() > 0)
-        keyboard[0].push_back(detail::makeCallbackButton("Done", "done"));
-    if (state.hasParsedTag) {
-        keyboard.emplace(keyboard.begin());
-        keyboard[0].push_back(detail::makeCallbackButton("Delete recogized", "delete_recognized"));
-    }
+inline ::MessageId
+renderTagPrompt(const std::vector<std::string>& tags, bool showDeleteParsed, ChatId chatId, BotRef bot) {
+    auto [keyboard, text] = detail::prepareTagListMessage(tags, showDeleteParsed);
+    return bot.sendMessage(chatId, text, nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)))->messageId;
+}
 
-    using namespace std::views;
-    using std::ranges::to;
-    auto text = std::format("You can add tags to the sticker.\n"
-                            "When you finish, send me a next sticker or press \"Done\".\n"
-                            "Tags:\n{}",
-                            state.tags | join_with('\n') | to<std::string>());
-    if (toEdit) {
-        bot.editMessageText(text, chatId, *toEdit, "", "", nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
-    } else {
-        bot.sendMessage(chatId, text, nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
-    }
+inline void updateTagPrompt(
+    const std::vector<std::string>& tags, bool showDeleteParsed, ChatId chatId, BotRef bot, ::MessageId toEdit) {
+    auto [keyboard, text] = detail::prepareTagListMessage(tags, showDeleteParsed);
+    bot.editMessageText(text, chatId, toEdit, "", "", nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
 }
 
 inline void renderEditorList(const StickerPackId& packId, ChatId chatId, BotRef bot) {

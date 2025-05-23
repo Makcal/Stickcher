@@ -60,8 +60,8 @@ inline void addSticker(const StickerPackId& packId,
                        const TextParser& parser) {
     auto tags = StickerRepository::getTags(packId, sticker.fileUniqueId);
     if (!tags.empty()) { // re-add
-        stateManager.put(TagAddition{packId, sticker.fileId, sticker.fileUniqueId, std::move(tags)});
-        renderTagPrompt(std::get<TagAddition>(*stateManager.get()), chatId, bot);
+        auto messageId = renderTagPrompt(tags, false, chatId, bot);
+        stateManager.put(TagAddition{packId, sticker.fileId, sticker.fileUniqueId, messageId, std::move(tags)});
         return;
     }
 
@@ -80,13 +80,13 @@ inline void addSticker(const StickerPackId& packId,
         return;
     }
     std::string image = bot.downloadFile(imagePtr->filePath);
-
     std::string parsedText = parser.parse(image);
-    if (parsedText.empty())
-        stateManager.put(TagAddition{packId, sticker.fileId, sticker.fileUniqueId});
-    else
-        stateManager.put(TagAddition{packId, sticker.fileId, sticker.fileUniqueId, parsedText});
-    renderTagPrompt(std::get<TagAddition>(*stateManager.get()), chatId, bot);
+
+    auto state = parsedText.empty() ? TagAddition{packId, sticker.fileId, sticker.fileUniqueId, -1}
+                                    : TagAddition{packId, sticker.fileId, sticker.fileUniqueId, -1, parsedText};
+    auto messageId = renderTagPrompt(state.tags, state.hasParsedTag, chatId, bot);
+    state.listMessage = messageId;
+    stateManager.put(std::move(state));
 }
 
 } // namespace detail
@@ -266,7 +266,6 @@ inline void tagAdditionButtonCallback(TagAddition& state, CallbackQueryRef cq, B
     if (cq.data == "done") {
         if (state.tags.empty()) {
             bot.sendMessage(chatId, "You can't add a sticker without a tag");
-            renderTagPrompt(state, chatId, bot);
         } else {
             StickerRepository::create(state);
             bot.sendMessage(chatId, "Sticker added");
@@ -278,7 +277,7 @@ inline void tagAdditionButtonCallback(TagAddition& state, CallbackQueryRef cq, B
     if (cq.data == "delete_recognized") {
         state.hasParsedTag = false;
         state.tags.erase(state.tags.begin());
-        renderTagPrompt(state, chatId, bot, cq.message->messageId);
+        updateTagPrompt(state.tags, false, chatId, bot, cq.message->messageId);
         return;
     }
 };
@@ -290,12 +289,12 @@ processTagMessage(TagAddition& state, MessageRef m, BotRef bot, SMRef stateManag
     if (!m.sticker) {
         if (!m.text.empty())
             state.tags.push_back(m.text);
-        renderTagPrompt(state, chatId, bot);
+        updateTagPrompt(state.tags, state.hasParsedTag, chatId, bot, state.listMessage);
         return;
     }
     if (state.tags.empty()) {
         bot.sendMessage(chatId, "You can't add a sticker without a tag. Back to the previous sticker");
-        renderTagPrompt(state, chatId, bot);
+        renderTagPrompt(state.tags, state.hasParsedTag, chatId, bot);
         return;
     }
     StickerRepository::create(state);
