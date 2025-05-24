@@ -1,7 +1,7 @@
 #pragma once
 
 #include "db/pack.hpp"
-#include "states.hpp"
+#include "db/pack_sharing.hpp"
 #include "types.hpp"
 #include "utils.hpp"
 
@@ -12,8 +12,8 @@
 #include <uuid.h>
 
 #include <format>
+#include <iterator>
 #include <memory>
-#include <optional>
 #include <ranges>
 #include <string>
 #include <string_view>
@@ -29,7 +29,10 @@ using namespace db::models;
 namespace detail {
 
 inline std::shared_ptr<InlineKeyboardButton> makeCallbackButton(std::string_view text, std::string_view data) {
-    return utils::make_shared(InlineKeyboardButton{.text = std::string(text), .callbackData = std::string(data)});
+    InlineKeyboardButton button{};
+    button.text = text;
+    button.callbackData = data;
+    return utils::make_shared(std::move(button));
 }
 
 inline std::shared_ptr<InlineKeyboardMarkup> makeKeyboardMarkup(InlineKeyboard&& keyboard) {
@@ -38,13 +41,36 @@ inline std::shared_ptr<InlineKeyboardMarkup> makeKeyboardMarkup(InlineKeyboard&&
     return markup;
 }
 
+inline std::pair<InlineKeyboard, std::string> prepareTagListMessage(const std::vector<std::string>& tags,
+                                                                    bool showDeleteParsed) {
+    InlineKeyboard keyboard(1);
+    keyboard[0].reserve(2);
+    keyboard[0].push_back(detail::makeCallbackButton("Cancel", "cancel"));
+    if (tags.size() > 0)
+        keyboard[0].push_back(detail::makeCallbackButton("Done", "done"));
+    if (showDeleteParsed) {
+        keyboard.emplace(keyboard.begin());
+        keyboard[0].push_back(detail::makeCallbackButton("Delete recogized", "delete_recognized"));
+    }
+
+    using namespace std::views;
+    using std::ranges::to;
+    auto text = std::format("You can add tags to the sticker.\n"
+                            "When you finish, send me a next sticker or press \"Done\".\n"
+                            "Tags:\n{}",
+                            tags | join_with('\n') | to<std::string>());
+    return {std::move(keyboard), std::move(text)};
+}
+
 } // namespace detail
 
 inline void renderPackList(UserId userId, ChatId chatId, BotRef bot) {
     auto packs = StickerPackRepository::getUserPacks(userId);
 
     InlineKeyboard keyboard(1 + ((packs.size() + 1) / 2)); // ceiling
+    keyboard[0].reserve(2);
     keyboard[0].push_back(detail::makeCallbackButton("Add new", "create"));
+    keyboard[0].push_back(detail::makeCallbackButton("Import", "import"));
     for (auto [i, p] : std::views::enumerate(packs)) {
         if (i % 2 == 0)
             keyboard[1 + (i / 2)].reserve(2);
@@ -57,22 +83,52 @@ inline void renderPackList(UserId userId, ChatId chatId, BotRef bot) {
 inline void renderPackNamePrompt(ChatId chatId, BotRef bot) {
     InlineKeyboard keyboard(1);
     keyboard[0].push_back(detail::makeCallbackButton("Cancel", "cancel"));
-    bot.sendMessage(chatId, "Enter name:", nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
+    bot.sendMessage(chatId, "Enter a name", nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
 }
 
-inline void renderPackView(StickerPackId packId, ChatId chatId, BotRef bot) {
-    auto packName = StickerPackRepository::getName(packId);
+inline void renderPackIdPrompt(ChatId chatId, BotRef bot) {
+    InlineKeyboard keyboard(1);
+    keyboard[0].push_back(detail::makeCallbackButton("Cancel", "cancel"));
+    bot.sendMessage(chatId, "Enter a pack's id", nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
+}
 
-    InlineKeyboard keyboard(2);
+inline void renderPackView(StickerPackId packId, UserId userId, ChatId chatId, BotRef bot) {
+    auto pack = StickerPackRepository::get(packId);
+    bool isOwner = pack.ownerId == userId;
+    unsigned int buttonRows = isOwner ? 3 : 1;
+    bool isEditor = false;
+    if (!isOwner)
+        isEditor = PackSharingRepository::checkEditorRights(packId, userId);
+    if (isEditor)
+        buttonRows = 2;
+
+    InlineKeyboard keyboard(buttonRows);
     keyboard[0].reserve(2);
-    keyboard[1].reserve(2);
     keyboard[0].push_back(detail::makeCallbackButton("Back", "back"));
-    keyboard[0].push_back(detail::makeCallbackButton("Delete", "delete"));
-    keyboard[1].push_back(detail::makeCallbackButton("Add sticker", "add_sticker"));
-    keyboard[1].push_back(detail::makeCallbackButton("Delete sticker", "delete_sticker"));
+    if (isOwner)
+        keyboard[0].push_back(detail::makeCallbackButton("Delete", "delete"));
+    else
+        keyboard[0].push_back(detail::makeCallbackButton("Remove", "remove"));
+    if (isOwner || isEditor) {
+        keyboard[1].reserve(2);
+        keyboard[1].push_back(detail::makeCallbackButton("Add sticker", "add_sticker"));
+        keyboard[1].push_back(detail::makeCallbackButton("Delete sticker", "delete_sticker"));
+    }
+    if (isOwner)
+        keyboard[2].push_back(detail::makeCallbackButton("Editors", "editors"));
 
-    bot.sendMessage(
-        chatId, std::format("Pack {}", packName), nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
+    bot.sendMessage(chatId,
+                    std::format("Pack \"{}\"\n"
+                                "Id: `{}`{}",
+                                pack.name,
+                                uuids::to_string(packId),
+                                isOwner || isEditor
+                                    ? "\nYou can add new stickers or new tags for exising stickers via \"Add sticker\""
+                                    : ""),
+                    nullptr,
+                    nullptr,
+                    detail::makeKeyboardMarkup(std::move(keyboard)),
+                    "MarkdownV2");
 }
 
 inline void renderPackDeleteConfirmation(ChatId chatId, BotRef bot) {
@@ -90,31 +146,31 @@ inline void renderStickerPrompt(ChatId chatId, BotRef bot) {
     bot.sendMessage(chatId, "Send me a sticker", nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
 }
 
-inline void renderTagPrompt(const states::TagAddition& state,
-                            ChatId chatId,
-                            BotRef bot,
-                            std::optional<::MessageId> toEdit = std::nullopt) {
-    InlineKeyboard keyboard(1);
-    keyboard[0].reserve(2);
-    keyboard[0].push_back(detail::makeCallbackButton("Cancel", "cancel"));
-    if (state.tags.size() > 0)
-        keyboard[0].push_back(detail::makeCallbackButton("Done", "done"));
-    if (state.hasParsedTag) {
-        keyboard.emplace(keyboard.begin());
-        keyboard[0].push_back(detail::makeCallbackButton("Delete recogized", "delete_recognized"));
-    }
+inline ::MessageId
+renderTagPrompt(const std::vector<std::string>& tags, bool showDeleteParsed, ChatId chatId, BotRef bot) {
+    auto [keyboard, text] = detail::prepareTagListMessage(tags, showDeleteParsed);
+    return bot.sendMessage(chatId, text, nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)))->messageId;
+}
 
-    using namespace std::views;
-    using std::ranges::to;
-    auto text = std::format("You can add tags to the sticker.\n"
-                            "When you finish, send me a next sticker or press \"Done\".\n"
-                            "Tags:\n{}",
-                            state.tags | join_with('\n') | to<std::string>());
-    if (toEdit) {
-        bot.editMessageText(text, chatId, *toEdit, "", "", nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
-    } else {
-        bot.sendMessage(chatId, text, nullptr, nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
-    }
+inline void updateTagPrompt(
+    const std::vector<std::string>& tags, bool showDeleteParsed, ChatId chatId, BotRef bot, ::MessageId toEdit) {
+    auto [keyboard, text] = detail::prepareTagListMessage(tags, showDeleteParsed);
+    bot.editMessageText(text, chatId, toEdit, "", "", nullptr, detail::makeKeyboardMarkup(std::move(keyboard)));
+}
+
+inline void renderEditorList(const StickerPackId& packId, ChatId chatId, BotRef bot) {
+    InlineKeyboard keyboard(1);
+    keyboard[0].push_back(detail::makeCallbackButton("Back", "back"));
+    std::string list;
+    for (auto [i, id] : std::views::enumerate(PackSharingRepository::getEditors(packId)))
+        std::format_to(std::back_inserter(list), "{}. {}", i + 1, id);
+    bot.sendMessage(chatId,
+                    std::format("Here is the list of people with editor privileges. "
+                                "Send a Telegram ID to add/remove from the list (raw feature).\n{}",
+                                list),
+                    nullptr,
+                    nullptr,
+                    detail::makeKeyboardMarkup(std::move(keyboard)));
 }
 
 } // namespace render

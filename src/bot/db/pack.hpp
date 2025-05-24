@@ -6,7 +6,6 @@
 #include "types.hpp"
 #include "utils.hpp"
 
-#include <sqlpp11/all_of.h>
 #include <sqlpp11/insert.h>
 #include <sqlpp11/remove.h>
 #include <sqlpp11/select.h>
@@ -28,16 +27,23 @@ class StickerPackRepository {
         StickerPackName name;
     };
 
-    static std::vector<StickerPackWithoutUser> getUserPacks(UserId ownerId) {
+    static std::vector<StickerPackWithoutUser> getUserPacks(UserId userId) {
         auto db = getDb();
-        tables::StickerPack sp;
-        auto packs = db(select(sp.id, sp.name).from(sp).where(sp.ownerId == ownerId));
-
         std::vector<StickerPackWithoutUser> result;
-        result.reserve(packs.size());
-        for (const auto& row : packs) {
+
+        tables::StickerPack sp;
+        auto packs = db(select(sp.id, sp.name).from(sp).where(sp.ownerId == userId));
+
+        tables::PackSharing ps;
+        auto importedPacks =
+            db(select(sp.id, sp.name).from(ps.join(sp).on(ps.packId == sp.id)).where(ps.userId == userId));
+
+        result.reserve(packs.size() + importedPacks.size());
+        for (const auto& row : packs)
             result.emplace_back(*uuids::uuid::from_string(row.id.value()), row.name);
-        }
+        for (const auto& row : importedPacks)
+            result.emplace_back(*uuids::uuid::from_string(row.id.value()), row.name);
+
         return result;
     }
 
@@ -49,16 +55,17 @@ class StickerPackRepository {
     static StickerPackWithoutId get(const StickerPackId& packId) {
         using namespace sqlpp;
         tables::StickerPack sp;
-        if (const auto& row = getDb()(select(all_of(sp)).from(sp).where(sp.id == uuids::to_string(packId))).front())
-            return StickerPackWithoutId{.name = row.name, .ownerId = row.ownerId};
+        if (auto result = getDb()(select(all_of(sp)).from(sp).where(sp.id == uuids::to_string(packId)));
+            result.size() > 0)
+            return StickerPackWithoutId{.name = result.front().name, .ownerId = result.front().ownerId};
         throw std::runtime_error(std::format("StickerPack {} not found", uuids::to_string(packId)));
     }
 
     static StickerPackName getName(const StickerPackId& packId) {
         using namespace sqlpp;
         tables::StickerPack sp;
-        if (const auto& row = getDb()(select(sp.name).from(sp).where(sp.id == uuids::to_string(packId))).front())
-            return row.name;
+        if (auto result = getDb()(select(sp.name).from(sp).where(sp.id == uuids::to_string(packId))); result.size() > 0)
+            return result.front().name;
         throw std::runtime_error(std::format("StickerPack {} not found", uuids::to_string(packId)));
     }
 
@@ -73,8 +80,9 @@ class StickerPackRepository {
     static void deletePack(const StickerPackId& packId) {
         using namespace sqlpp;
         tables::StickerPack sp;
-        if (getDb()(remove_from(sp).where(sp.id == uuids::to_string(packId))) == 0)
-            throw std::runtime_error(std::format("StickerPack {} not found", uuids::to_string(packId)));
+        auto packIdStr = uuids::to_string(packId);
+        if (getDb()(remove_from(sp).where(sp.id == packIdStr)) == 0)
+            throw std::runtime_error(std::format("StickerPack {} not found", packIdStr));
     }
 };
 

@@ -22,12 +22,18 @@ int main() {
                                                                 packListButtonHandler,
                                                                 packCreateHandler,
                                                                 packCreateButtonHandler,
+                                                                packImportHandler,
+                                                                packImportButtonHandler,
                                                                 packViewButtonHandler,
                                                                 packDeletionButtonHandler,
                                                                 stickerAdditionButtonHandler,
                                                                 stickerAdditionHandler,
                                                                 tagAdditionButtonHandler,
                                                                 tagAdditionHandler,
+                                                                stickerDeletionButtonHandler,
+                                                                stickerDeletionHandler,
+                                                                editorListHandler,
+                                                                editorListButtonHandler,
                                                                 inlineSearchHandler>
         bot{{}, {TextParser{utils::getenvWithError("TEXT_PARSER_URL")}, settings}};
 

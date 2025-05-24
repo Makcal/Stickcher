@@ -201,4 +201,74 @@ namespace tables
       };
     };
   };
+  namespace PackSharing_
+  {
+    struct UserId
+    {
+      struct _alias_t
+      {
+        static constexpr const char _literal[] =  "user_id";
+        using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+        template<typename T>
+        struct _member_t
+          {
+            T userId;
+            T& operator()() { return userId; }
+            const T& operator()() const { return userId; }
+          };
+      };
+      using _traits = sqlpp::make_traits<sqlpp::integer, sqlpp::tag::require_insert>;
+    };
+    struct PackId
+    {
+      struct _alias_t
+      {
+        static constexpr const char _literal[] =  "pack_id";
+        using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+        template<typename T>
+        struct _member_t
+          {
+            T packId;
+            T& operator()() { return packId; }
+            const T& operator()() const { return packId; }
+          };
+      };
+      using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::require_insert>;
+    };
+    struct IsEditor
+    {
+      struct _alias_t
+      {
+        static constexpr const char _literal[] =  "is_editor";
+        using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+        template<typename T>
+        struct _member_t
+          {
+            T isEditor;
+            T& operator()() { return isEditor; }
+            const T& operator()() const { return isEditor; }
+          };
+      };
+      using _traits = sqlpp::make_traits<sqlpp::boolean>;
+    };
+  } // namespace PackSharing_
+
+  struct PackSharing: sqlpp::table_t<PackSharing,
+               PackSharing_::UserId,
+               PackSharing_::PackId,
+               PackSharing_::IsEditor>
+  {
+    struct _alias_t
+    {
+      static constexpr const char _literal[] =  "pack_sharing";
+      using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+      template<typename T>
+      struct _member_t
+      {
+        T packSharing;
+        T& operator()() { return packSharing; }
+        const T& operator()() const { return packSharing; }
+      };
+    };
+  };
 } // namespace tables
