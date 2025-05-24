@@ -41,36 +41,36 @@ services:
     image: nginx:latest
     volumes:
       - ./nginx:/etc/nginx/conf.d
-    depends_on:
-      scanner1:
-        condition: service_healthy
-      scanner2:
-        condition: service_healthy
+    # depends_on:
+    #   scanner1:
+    #     condition: service_healthy
+    #   scanner2:
+    #     condition: service_healthy
 
   scanner1:
     build: ./src/scanner/.
     volumes:
       - easyocr-model:/root/.EasyOCR/model
-    healthcheck:
-      test: python -c "from http.client import HTTPConnection; conn = HTTPConnection('localhost', 8000); conn.request('GET', '/health'); exit(0 if conn.getresponse().status == 200 else 1)"
-      interval: 5s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
+    # healthcheck:
+    #   test: python -c "from http.client import HTTPConnection; conn = HTTPConnection('localhost', 8000); conn.request('GET', '/health'); exit(0 if conn.getresponse().status == 200 else 1)"
+    #   interval: 5s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 20s
 
-  scanner2:
-    build: ./src/scanner/.
-    volumes:
-      - easyocr-model:/root/.EasyOCR/model
-    healthcheck:
-      test: python -c "from http.client import HTTPConnection; conn = HTTPConnection('localhost', 8000); conn.request('GET', '/health'); exit(0 if conn.getresponse().status == 200 else 1)"
-      interval: 6s
-      timeout: 10s
-      retries: 3
-      start_period: 25s
-    depends_on:
-      scanner1:
-        condition: service_healthy
+  # scanner2:
+  #   build: ./src/scanner/.
+  #   volumes:
+  #     - easyocr-model:/root/.EasyOCR/model
+  #   healthcheck:
+  #     test: python -c "from http.client import HTTPConnection; conn = HTTPConnection('localhost', 8000); conn.request('GET', '/health'); exit(0 if conn.getresponse().status == 200 else 1)"
+  #     interval: 6s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 25s
+  #   depends_on:
+  #     scanner1:
+  #       condition: service_healthy
 
 volumes:
   db:
