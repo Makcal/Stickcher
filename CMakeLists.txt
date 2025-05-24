@@ -25,7 +25,7 @@ message(STATUS "${CMAKE_PROJECT_NAME} version: ${PROJECT_VERSION}")
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-add_compile_options(-ftime-report)
+add_compile_options(-ftime-report -Wall -Wextra)
 # add_compile_options(-O0 -g)
 
 # dependencies

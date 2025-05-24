@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <string_view>
 #include <system_error>
+#include <type_traits>
 #include <utility>
 
 namespace utils {
@@ -49,7 +50,7 @@ ratioToAll(R&& choices, std::string_view query, double scoreCutoff = 0.0, Proj p
 
 template <typename T>
 std::shared_ptr<T> make_shared(T&& t) {
-    return std::make_shared<T>(std::forward<T>(t));
+    return std::make_shared<std::remove_cv_t<T>>(std::forward<T>(t));
 }
 
 template <typename T>

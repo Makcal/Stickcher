@@ -55,16 +55,17 @@ class StickerPackRepository {
     static StickerPackWithoutId get(const StickerPackId& packId) {
         using namespace sqlpp;
         tables::StickerPack sp;
-        if (const auto& row = getDb()(select(all_of(sp)).from(sp).where(sp.id == uuids::to_string(packId))).front())
-            return StickerPackWithoutId{.name = row.name, .ownerId = row.ownerId};
+        if (auto result = getDb()(select(all_of(sp)).from(sp).where(sp.id == uuids::to_string(packId)));
+            result.size() > 0)
+            return StickerPackWithoutId{.name = result.front().name, .ownerId = result.front().ownerId};
         throw std::runtime_error(std::format("StickerPack {} not found", uuids::to_string(packId)));
     }
 
     static StickerPackName getName(const StickerPackId& packId) {
         using namespace sqlpp;
         tables::StickerPack sp;
-        if (const auto& row = getDb()(select(sp.name).from(sp).where(sp.id == uuids::to_string(packId))).front())
-            return row.name;
+        if (auto result = getDb()(select(sp.name).from(sp).where(sp.id == uuids::to_string(packId))); result.size() > 0)
+            return result.front().name;
         throw std::runtime_error(std::format("StickerPack {} not found", uuids::to_string(packId)));
     }
 

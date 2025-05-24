@@ -34,10 +34,10 @@ class PackSharingRepository {
         auto packIdStr = uuids::to_string(packId);
 
         tables::StickerPack sp;
-        const auto& row = db(select(sp.ownerId).from(sp).where(sp.id == packIdStr)).front();
-        if (!row)
+        auto result = db(select(sp.ownerId).from(sp).where(sp.id == packIdStr));
+        if (result.size() == 0)
             return ImportResult::NotExist;
-        if (row.ownerId == userId)
+        if (result.front().ownerId == userId)
             return ImportResult::ImportByOwner;
 
         try {
@@ -52,10 +52,9 @@ class PackSharingRepository {
     static bool checkEditorRights(const StickerPackId& packId, UserId userId) {
         using namespace sqlpp;
         tables::PackSharing ps;
-        auto db = getDb();
         auto query = select(ps.isEditor).from(ps).where(ps.packId == uuids::to_string(packId) && ps.userId == userId);
-        if (const auto& row = db(query).front())
-            return row.isEditor;
+        if (auto result = getDb()(query); result.size() > 0)
+            return result.front().isEditor;
         return false;
     }
 

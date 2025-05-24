@@ -2,7 +2,6 @@
 
 #include "db/pack.hpp"
 #include "db/pack_sharing.hpp"
-#include "states.hpp"
 #include "types.hpp"
 #include "utils.hpp"
 
@@ -15,7 +14,6 @@
 #include <format>
 #include <iterator>
 #include <memory>
-#include <optional>
 #include <ranges>
 #include <string>
 #include <string_view>
@@ -31,7 +29,10 @@ using namespace db::models;
 namespace detail {
 
 inline std::shared_ptr<InlineKeyboardButton> makeCallbackButton(std::string_view text, std::string_view data) {
-    return utils::make_shared(InlineKeyboardButton{.text = std::string(text), .callbackData = std::string(data)});
+    InlineKeyboardButton button{};
+    button.text = text;
+    button.callbackData = data;
+    return utils::make_shared(std::move(button));
 }
 
 inline std::shared_ptr<InlineKeyboardMarkup> makeKeyboardMarkup(InlineKeyboard&& keyboard) {
