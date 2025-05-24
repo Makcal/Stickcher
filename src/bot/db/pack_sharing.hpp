@@ -9,6 +9,7 @@
 #include <sqlpp11/postgresql/exception.h>
 #include <sqlpp11/remove.h>
 #include <sqlpp11/select.h>
+#include <sqlpp11/update.h>
 #include <uuid.h>
 
 #include <format>

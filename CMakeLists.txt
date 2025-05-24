@@ -53,18 +53,18 @@ target_include_directories(main PRIVATE
     ${CMAKE_SOURCE_DIR}/src/bot
 )
 
-target_precompile_headers(main PRIVATE
-    <tg_stater/bot.hpp>
-    <tgbot/Bot.h>
-    <tgbot/Api.h>
-    <tgbot/types/Message.h>
-    <sqlpp11/sqlpp11.h>
-    <uuid.h>
-    <httplib.h>
-    [["db/db.hpp"]]
-    [["db/tables.hpp"]]
-    [["utils.hpp"]]
-)
+# target_precompile_headers(main PRIVATE
+#     <tg_stater/bot.hpp>
+#     <tgbot/Bot.h>
+#     <tgbot/Api.h>
+#     <tgbot/types/Message.h>
+#     <sqlpp11/sqlpp11.h>
+#     <uuid.h>
+#     <httplib.h>
+#     [["db/db.hpp"]]
+#     [["db/tables.hpp"]]
+#     [["utils.hpp"]]
+# )
 
 target_link_libraries(main PRIVATE
     ${Sqlpp11_LIBRARIES}
