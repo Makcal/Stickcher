@@ -21,6 +21,7 @@
 
 #include <memory>
 #include <ranges>
+#include <regex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -305,15 +306,26 @@ processTagMessage(TagAddition& state, MessageRef m, BotRef bot, SMRef stateManag
 };
 using tagAdditionHandler = Handler<Events::Message{}, processTagMessage>;
 
+inline const std::regex queryAtPackPattern{"(.*) *@ *(.+)"}; // NOLINT(cert-err58-cpp)
 inline void searchStickers(const InlineQuery& iq, BotRef bot, const BotSettings& settings) {
     if (iq.query.empty()) {
         bot.answerInlineQuery(iq.id, {});
         return;
     }
-    auto fileIds =
-        StickerRepository::findAllByTag(iq.from->id, iq.query, settings.similarityThreshold, settings.associationLimit);
+
+    std::smatch packMatch;
+    auto fileIds = std::regex_match(iq.query, packMatch, queryAtPackPattern)
+                       ? StickerRepository::findFromPackByTag(iq.from->id,
+                                                              packMatch[1].str(),
+                                                              packMatch[2].str(),
+                                                              settings.similarityThreshold,
+                                                              settings.associationLimit)
+                       : StickerRepository::findAllByTag(
+                             iq.from->id, iq.query, settings.similarityThreshold, settings.associationLimit);
+
     std::vector<InlineQueryResult::Ptr> results;
     results.reserve(fileIds.size());
+
     std::unordered_set<StickerFileId> idSet;
     for (auto [i, id] : std::views::enumerate(fileIds)) {
         if (idSet.contains(id))
@@ -324,6 +336,7 @@ inline void searchStickers(const InlineQuery& iq, BotRef bot, const BotSettings&
         p->stickerFileId = std::move(id);
         results.emplace_back(p);
     }
+
     bot.answerInlineQuery(iq.id, results);
 };
 using inlineSearchHandler = Handler<Events::InlineQuery{}, searchStickers, AnyState{}>;
