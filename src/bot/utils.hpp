@@ -1,12 +1,15 @@
 #pragma once
 
+#include <boost/locale/generator.hpp>
 #include <rapidfuzz/fuzz.hpp>
 #include <uuid.h>
 
+#include <concepts>
 #include <cstdlib>
 #include <cstring>
 #include <format>
 #include <functional>
+#include <locale>
 #include <memory>
 #include <optional>
 #include <random>
@@ -18,6 +21,8 @@
 #include <utility>
 
 namespace utils {
+
+inline const std::locale utf8locale = boost::locale::generator{}("en_US.UTF-8"); // NOLINT(cert-err58-cpp)
 
 inline const char* getenvWithError(const char* key) {
     const char* value = std::getenv(key);
@@ -32,12 +37,17 @@ inline uuids::uuid generateUuid() {
     return generator();
 }
 
-template <std::ranges::forward_range R, typename Proj = std::identity>
-std::vector<std::pair<std::ranges::borrowed_iterator_t<R>, double>>
-ratioToAll(R&& choices, std::string_view query, double scoreCutoff = 0.0, Proj proj = {}) { // NOLINT(*-forward)
+template <typename CharT, std::ranges::forward_range R, typename Proj = std::identity>
+    requires std::same_as<CharT,
+                          std::ranges::range_value_t<std::invoke_result_t<Proj, std::ranges::range_reference_t<R>>>> ||
+             std::convertible_to<const CharT*, std::ranges::range_value_t<R>>
+auto ratioToAll(R&& choices, // NOLINT(*-forward)
+                std::basic_string_view<CharT> query,
+                double scoreCutoff = 0.0,
+                Proj proj = {}) -> std::vector<std::pair<std::ranges::borrowed_iterator_t<R>, double>> {
     using namespace std::ranges;
     std::vector<std::pair<borrowed_iterator_t<R>, double>> results;
-    rapidfuzz::fuzz::CachedPartialRatio<char> scorer(query);
+    rapidfuzz::fuzz::CachedPartialRatio<CharT> scorer(query);
 
     for (auto it = begin(choices); it != end(choices); ++it) {
         double score = scorer.similarity(std::invoke(proj, *it), scoreCutoff);

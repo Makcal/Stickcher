@@ -6,6 +6,7 @@
 #include "types.hpp"
 #include "utils.hpp"
 
+#include <boost/locale.hpp>
 #include <sqlpp11/lower.h>
 #include <sqlpp11/postgresql/insert.h>
 #include <sqlpp11/remove.h>
@@ -27,13 +28,20 @@ class StickerRepository {
     static std::vector<StickerFileId>
     findSimilarStickers(auto& rows, std::string_view tag, double similarityThreshold, std::size_t limit) {
         using namespace std::ranges;
+        namespace locale = boost::locale;
 
-        using Association = std::pair<StickerFileId, std::string>;
+        using Association = std::pair<StickerFileId, std::u32string>;
         std::vector<Association> associations;
-        for (const auto& row : rows)
-            associations.emplace_back(row.fileId, row.text);
+        for (const auto& row : rows) {
+            associations.emplace_back(
+                row.fileId, locale::conv::utf_to_utf<char32_t>(locale::to_lower(row.text.value(), utils::utf8locale)));
+        }
 
-        auto ratios = utils::ratioToAll(associations, tag, similarityThreshold, &Association::second);
+        auto ratios =
+            utils::ratioToAll<char32_t>(associations,
+                                        locale::conv::utf_to_utf<char32_t>(tag.data(), tag.data() + tag.size()),
+                                        similarityThreshold,
+                                        &Association::second);
         sort(ratios, greater{}, [](auto& r) { return r.second; });
         return ratios | views::take(limit) |
                views::transform([](auto& r) -> decltype(auto) { return std::move(r.first->first); }) |
