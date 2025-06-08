@@ -35,6 +35,7 @@ find_package(stduuid REQUIRED)
 find_package(TgBotStater REQUIRED)
 find_package(rapidfuzz REQUIRED)
 find_package(httplib REQUIRED)
+find_package(Boost REQUIRED)
 
 add_custom_target(ddl2cpp
     COMMAND bash -c "cd ${CMAKE_SOURCE_DIR}/src/bot/db && \
@@ -73,6 +74,7 @@ target_link_libraries(main PRIVATE
     ${tgbotstater_LIBRARIES}
     ${rapidfuzz_LIBRARIES}
     ${httplib_LIBRARIES}
+    ${Boost_LIBRARIES}
 )
 
 enable_testing()

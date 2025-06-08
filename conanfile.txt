@@ -5,6 +5,7 @@ rapidfuzz/3.1.1
 stduuid/1.2.3
 tgbotstater/0.3.3
 cpp-httplib/0.19.0
+boost/1.83.0
 
 [generators]
 CMakeDeps
