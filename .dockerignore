@@ -13,6 +13,7 @@ docker-compose*.yml
 .env.example
 
 # Build artifacts
+/build
 .cache
 CMakeCache.txt
 CMakeUserPresets.json
