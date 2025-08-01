@@ -1,3 +1,4 @@
-__pycache__
-venv
-.venv
+EasyOCR
+dataset.csv
+sticker.png
+

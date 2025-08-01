@@ -45,3 +45,6 @@ sticker.webp
 
 # Backups
 backups/
+
+# Python
+__pycache__
