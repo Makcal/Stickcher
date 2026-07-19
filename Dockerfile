@@ -5,19 +5,19 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /tmp
-RUN wget https://github.com/conan-io/conan/releases/download/2.15.1/conan-2.15.1-linux-x86_64.tgz \
- && tar -xvf conan-2.15.1-linux-x86_64.tgz \
+RUN wget https://github.com/conan-io/conan/releases/download/2.28.1/conan-2.28.1-linux-x86_64.tgz \
+ && tar -xvf conan-2.28.1-linux-x86_64.tgz \
  && mv bin/* /bin \
- && rm conan-2.15.1-linux-x86_64.tgz
+ && rm conan-2.28.1-linux-x86_64.tgz
 
 RUN conan profile detect \
  && sed -i 's/compiler.cppstd=.*/compiler.cppstd=23/' ~/.conan2/profiles/default
 
 WORKDIR /deps
-RUN wget https://github.com/Makcal/TgBotStater/archive/refs/tags/v0.4.2.tar.gz \
- && tar -xvf v0.4.2.tar.gz \
- && rm v0.4.2.tar.gz \
- && cd TgBotStater-0.4.2 \
+RUN wget https://github.com/Makcal/TgBotStater/archive/refs/tags/v0.4.3.tar.gz \
+ && tar -xvf v0.4.3.tar.gz \
+ && rm v0.4.3.tar.gz \
+ && cd TgBotStater-0.4.3 \
  && conan create . --build=missing
 
 WORKDIR /app

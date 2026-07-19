@@ -7,8 +7,10 @@
 #include <tg_stater/bot.hpp>
 #include <tg_stater/dependencies.hpp>
 #include <tgbot/Bot.h>
+#include <tgbot/net/CurlHttpClient.h>
 
 #include <cstddef>
+#include <cstdlib>
 
 int main() {
     using namespace tg_stater;
@@ -37,5 +39,10 @@ int main() {
                                                                 inlineSearchHandler>
         bot{{}, {TextParser{utils::getenvWithError("TEXT_PARSER_URL")}, settings}};
 
-    bot.start(TgBot::Bot{utils::getenvWithError("BOT_TOKEN")});
+    TgBot::CurlHttpClient http_client{};
+    const char* proxy = std::getenv("BOT_PROXY");
+    if (proxy != nullptr)
+        http_client.setProxy(proxy);
+
+    bot.start(TgBot::Bot{utils::getenvWithError("BOT_TOKEN"), http_client});
 }
